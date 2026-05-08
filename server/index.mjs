@@ -1,11 +1,17 @@
 import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const app = express()
-const port = process.env.PORT || 8787
+const port = Number(process.env.PORT || 3000)
 const deepseekApiKey = process.env.DEEPSEEK_API_KEY
 const deepseekBaseUrl = process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com'
+const currentFilePath = fileURLToPath(import.meta.url)
+const currentDir = path.dirname(currentFilePath)
+const distDir = path.resolve(currentDir, '../dist')
+const indexHtmlPath = path.join(distDir, 'index.html')
 
 app.use(cors())
 app.use(express.json({ limit: '2mb' }))
@@ -367,6 +373,12 @@ app.post('/api/talk', async (req, res) => {
       error: error instanceof Error ? error.message : 'unknown_error',
     })
   }
+})
+
+app.use(express.static(distDir))
+
+app.get(/^(?!\/api).*/, (_req, res) => {
+  res.sendFile(indexHtmlPath)
 })
 
 app.listen(port, () => {

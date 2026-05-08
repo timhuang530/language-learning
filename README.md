@@ -75,47 +75,62 @@ npm run build:server
 
 ## 腾讯云部署建议
 
-推荐拆成两个服务：
+当前项目已经适配成单服务部署：
 
-- 前端静态站点：部署到腾讯云静态网站托管或 COS + CDN
-- 后端 API：部署到腾讯云轻量应用服务器 / CVM / 云托管
+- 同一个 Node 服务同时提供前端页面和 `/api`
+- 默认监听 `PORT`
+- Docker 部署时默认暴露 `3000`
 
-### 方式一：同机部署
+### 控制台推荐填写
 
-适合当前阶段，最省事。
+- 服务名称：`languagelearning`
+- 目标目录：留空
+- Dockerfile 文件：选择 `有`
+- Dockerfile 名称：`Dockerfile`
+- 访问端口：`80`
+- 服务端口：`3000`
 
-1. 服务器安装 Node.js 20+
-2. 拉取仓库
-3. 创建 `.env`
-4. 执行：
+### 环境变量怎么填
 
-```bash
-npm install
-npm run build
-node server/index.mjs
-```
-
-5. 用 Nginx：
-- 将前端 `dist/` 指向站点根目录
-- 将 `/api` 反向代理到 `http://localhost:8787`
-
-### 方式二：前后端分离
-
-- 前端：打包后上传到腾讯云静态站点
-- 后端：单独部署 Node 服务
-- 前端通过域名或网关访问后端 `/api`
-
-### 必要环境变量
+最少填这 3 个：
 
 ```bash
-DEEPSEEK_API_KEY=你的新 token
+DEEPSEEK_API_KEY=sk-xxxxxxxxxxxxxxxx
 DEEPSEEK_BASE_URL=https://api.deepseek.com
-PORT=8787
+PORT=3000
 ```
+
+说明：
+
+- `DEEPSEEK_API_KEY`：必须填完整 token，包含前缀 `sk-`
+- `DEEPSEEK_BASE_URL`：保持 `https://api.deepseek.com` 即可
+- `PORT`：填 `3000`，要和腾讯云里的服务端口一致
+
+### 你截图里的表单应该这样填
+
+- Git 仓库：`timhuang530/language-learning`
+- Branch：`main`
+- 服务名称：`languagelearning`
+- 端口映射：
+  - 访问端口：`80`
+  - 服务端口：`3000`
+- 目标目录：留空
+- Dockerfile 文件：`有`
+- Dockerfile 名称：`Dockerfile`
+
+### 部署原理
+
+腾讯云构建时会：
+
+1. 用 `Dockerfile` 构建镜像
+2. 在镜像里执行前端打包
+3. 启动 `node server/index.mjs`
+4. 由 Express 同时提供：
+   - 前端页面
+   - `/api` 接口
 
 ### 上线前建议
 
 - 将当前这枚 DeepSeek token 立即轮换
-- 在服务器上只保留 `.env`，不要写入仓库
-- 给 Node 服务加 `pm2` 或 systemd 守护
-- 为 `/api` 配置 HTTPS 和反向代理
+- 环境变量直接配在腾讯云控制台，不要提交 `.env`
+- 如果后面有自定义域名，再补 HTTPS 和域名解析
