@@ -54,9 +54,13 @@ type ReaderSelection = {
 }
 
 type ChatMessage = {
+  id?: string
   side: 'ai' | 'user'
   text: string
+  audioDataUrl?: string | null
 }
+
+type ChatMessagesByMode = Record<TalkMode, ChatMessage[]>
 
 type ChatHistoryItem = {
   id: string
@@ -79,7 +83,7 @@ type BrowserSpeechRecognitionInstance = {
   continuous: boolean
   onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null
   onend: (() => void) | null
-  onerror: (() => void) | null
+  onerror: ((event?: { error?: string }) => void) | null
   start: () => void
   stop: () => void
 }
@@ -275,20 +279,13 @@ const lessons: Lesson[] = [
   },
 ]
 
-const initialChat: ChatMessage[] = [
-  {
-    side: 'ai',
-    text: 'Hey, nice to meet you. I am your American friend for today. Want to start with something easy and tell me how your day has been?',
-  },
-  {
-    side: 'user',
-    text: 'My day is busy, I have too many meetings and I feel a little tired.',
-  },
-  {
-    side: 'ai',
-    text: 'That sounds rough. What part of the day drained you the most?',
-  },
-]
+const emptyChatMessagesByMode: ChatMessagesByMode = {
+  'Free Talk': [],
+  Work: [],
+  Meeting: [],
+  Interview: [],
+  Travel: [],
+}
 
 const systemAddedTodayIds = ['compromise', 'procrastinate']
 const transcriptSamples: Record<TalkMode, string> = {
@@ -297,6 +294,55 @@ const transcriptSamples: Record<TalkMode, string> = {
   Meeting: 'i want to say my opinion politely and confirm what the team should do after this meeting',
   Interview: 'i want to answer a question about my strengths and one difficult project from last year',
   Travel: 'i need to ask for directions and explain that my itinerary changed this afternoon',
+}
+
+const TALK_DEBUG_URL = 'http://127.0.0.1:7777/event'
+const TALK_DEBUG_SESSION_ID = 'talk-recording-auto-stop'
+
+function createMessageId() {
+  return `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`
+}
+
+async function blobToDataUrl(blob: Blob) {
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      if (typeof reader.result === 'string') {
+        resolve(reader.result)
+        return
+      }
+
+      reject(new Error('Failed to read audio data.'))
+    }
+    reader.onerror = () => {
+      reject(reader.error ?? new Error('Failed to read audio data.'))
+    }
+    reader.readAsDataURL(blob)
+  })
+}
+
+function reportTalkDebug(hypothesisId: 'A' | 'B' | 'C' | 'D' | 'E', msg: string, data: Record<string, unknown> = {}) {
+  if (typeof window === 'undefined' || typeof window.fetch !== 'function') {
+    return
+  }
+
+  window
+    .fetch(TALK_DEBUG_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        sessionId: TALK_DEBUG_SESSION_ID,
+        runId: 'pre',
+        hypothesisId,
+        location: 'src/App.tsx',
+        msg,
+        data,
+        ts: Date.now(),
+      }),
+    })
+    .catch(() => {})
 }
 
 function Icon({
@@ -482,7 +528,11 @@ function App() {
   const [speakingText, setSpeakingText] = useState<string | null>(null)
   const [isRecording, setIsRecording] = useState(false)
   const [liveTranscript, setLiveTranscript] = useState('')
-  const [chatMessages, setChatMessages] = usePersistentState<ChatMessage[]>('ll.chatMessages', initialChat)
+  const [recordingSeconds, setRecordingSeconds] = useState(0)
+  const [chatMessagesByMode, setChatMessagesByMode] = usePersistentState<ChatMessagesByMode>(
+    'll.chatMessagesByMode',
+    emptyChatMessagesByMode,
+  )
   const [chatHistory, setChatHistory] = usePersistentState<ChatHistoryItem[]>('ll.chatHistory', [])
   const [searchHistory, setSearchHistory] = usePersistentState<SearchHistoryItem[]>('ll.searchHistory', [])
   const [dailyWords, setDailyWords] = usePersistentState<VocabularyItem[]>('ll.dailyWords', [])
@@ -492,15 +542,43 @@ function App() {
   const [isSendingTalk, setIsSendingTalk] = useState(false)
   const [isLoadingDailyWords, setIsLoadingDailyWords] = useState(false)
   const [isLoadingReader, setIsLoadingReader] = useState(false)
+  const [playingUserAudioId, setPlayingUserAudioId] = useState<string | null>(null)
+  const [recordingNotice, setRecordingNotice] = useState<string | null>(null)
   const recognitionRef = useRef<BrowserSpeechRecognitionInstance | null>(null)
-  const cancelRecordingRef = useRef(false)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const mediaStreamRef = useRef<MediaStream | null>(null)
+  const userAudioRef = useRef<HTMLAudioElement | null>(null)
+  const talkConversationRef = useRef<HTMLDivElement | null>(null)
+  const chatEndRef = useRef<HTMLDivElement | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
   const liveTranscriptRef = useRef('')
+  const recordingModeRef = useRef<'browser' | 'fallback' | null>(null)
+  const fallbackTimerRef = useRef<number | null>(null)
+  const recordingTickRef = useRef<number | null>(null)
+  const recordingTimeoutRef = useRef<number | null>(null)
+  const recognitionRestartTimerRef = useRef<number | null>(null)
+  const stopRequestedRef = useRef(false)
 
   useEffect(() => {
     return () => {
       if (typeof window !== 'undefined') {
         window.speechSynthesis.cancel()
       }
+      if (fallbackTimerRef.current) {
+        window.clearInterval(fallbackTimerRef.current)
+      }
+      if (recordingTickRef.current) {
+        window.clearInterval(recordingTickRef.current)
+      }
+      if (recordingTimeoutRef.current) {
+        window.clearTimeout(recordingTimeoutRef.current)
+      }
+      if (recognitionRestartTimerRef.current) {
+        window.clearTimeout(recognitionRestartTimerRef.current)
+      }
+      userAudioRef.current?.pause()
+      mediaRecorderRef.current?.stop()
+      mediaStreamRef.current?.getTracks().forEach((track) => track.stop())
       recognitionRef.current?.stop()
     }
   }, [])
@@ -557,12 +635,119 @@ function App() {
     liveTranscriptRef.current = liveTranscript
   }, [liveTranscript])
 
+  const chatMessages = chatMessagesByMode[talkMode] ?? []
+
+  useEffect(() => {
+    if (activeTab !== 'talk') {
+      return
+    }
+
+    let nextFrameId = 0
+    const scrollToLatest = window.requestAnimationFrame(() => {
+      nextFrameId = window.requestAnimationFrame(() => {
+        if (talkConversationRef.current) {
+          talkConversationRef.current.scrollTo({
+            top: talkConversationRef.current.scrollHeight,
+            behavior: isRecording ? 'auto' : 'smooth',
+          })
+          return
+        }
+
+        chatEndRef.current?.scrollIntoView({
+          block: 'end',
+          behavior: isRecording ? 'auto' : 'smooth',
+        })
+      })
+    })
+
+    return () => {
+      window.cancelAnimationFrame(scrollToLatest)
+      if (nextFrameId) {
+        window.cancelAnimationFrame(nextFrameId)
+      }
+    }
+  }, [activeTab, chatMessages.length, isSendingTalk, isRecording, talkMode])
+
+  const setCurrentChatMessages = (
+    updater: ChatMessage[] | ((current: ChatMessage[]) => ChatMessage[]),
+  ) => {
+    setChatMessagesByMode((current) => {
+      const currentMessages = current[talkMode] ?? []
+      const nextMessages =
+        typeof updater === 'function'
+          ? (updater as (messages: ChatMessage[]) => ChatMessage[])(currentMessages)
+          : updater
+
+      return {
+        ...current,
+        [talkMode]: nextMessages,
+      }
+    })
+  }
+
+  const stopUserAudioPlayback = () => {
+    if (userAudioRef.current) {
+      userAudioRef.current.pause()
+      userAudioRef.current.currentTime = 0
+      userAudioRef.current = null
+    }
+
+    setPlayingUserAudioId(null)
+  }
+
+  const playUserAudio = (messageId: string, audioDataUrl: string) => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    if (playingUserAudioId === messageId) {
+      stopUserAudioPlayback()
+      return
+    }
+
+    stopUserAudioPlayback()
+    window.speechSynthesis.cancel()
+    setSpeakingText(null)
+
+    const audio = new Audio(audioDataUrl)
+    userAudioRef.current = audio
+    setPlayingUserAudioId(messageId)
+
+    audio.onended = () => {
+      if (userAudioRef.current === audio) {
+        userAudioRef.current = null
+      }
+      setPlayingUserAudioId(null)
+    }
+
+    audio.onpause = () => {
+      if (audio.currentTime === 0 || audio.ended) {
+        setPlayingUserAudioId(null)
+      }
+    }
+
+    audio.onerror = () => {
+      if (userAudioRef.current === audio) {
+        userAudioRef.current = null
+      }
+      setPlayingUserAudioId(null)
+    }
+
+    void audio.play().catch(() => {
+      if (userAudioRef.current === audio) {
+        userAudioRef.current = null
+      }
+      setPlayingUserAudioId(null)
+    })
+  }
+
   const speakText = (text: string) => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
       return
     }
 
     const synthesis = window.speechSynthesis
+    stopUserAudioPlayback()
     if (speakingText === text) {
       synthesis.cancel()
       setSpeakingText(null)
@@ -629,18 +814,20 @@ function App() {
     setSearchHistory((current) => [nextItem, ...current].slice(0, 20))
   }
 
-  const submitTranscript = async (transcript: string) => {
+  const submitTranscript = async (transcript: string, audioDataUrl?: string | null) => {
     if (!transcript.trim()) {
       return
     }
 
     const nextUserMessage: ChatMessage = {
+      id: createMessageId(),
       side: 'user',
       text: transcript.trim(),
+      audioDataUrl: audioDataUrl ?? null,
     }
 
     const nextMessages = [...chatMessages, nextUserMessage]
-    setChatMessages(nextMessages)
+    setCurrentChatMessages(nextMessages)
     setIsSendingTalk(true)
 
     try {
@@ -651,59 +838,226 @@ function App() {
         messages: nextMessages,
       })
 
-      const aiMessages: ChatMessage[] = [{ side: 'ai', text: response.reply }]
+      const aiMessages: ChatMessage[] = [{ id: createMessageId(), side: 'ai', text: response.reply }]
 
       if (response.correction) {
         aiMessages.push({
+          id: createMessageId(),
           side: 'ai',
           text: `A more natural way: ${response.correction}`,
         })
       }
 
-      setChatMessages((current) => [...current, ...aiMessages])
+      setCurrentChatMessages((current) => [...current, ...aiMessages])
+      speakText(response.reply)
       rememberChat(talkMode, transcript.length > 36 ? `${transcript.slice(0, 36)}...` : transcript)
     } catch {
-      setChatMessages((current) => [
+      setCurrentChatMessages((current) => [
         ...current,
         {
+          id: createMessageId(),
           side: 'ai',
           text: 'I could not reach the language server just now. Try again in a moment.',
         },
       ])
+      speakText('I could not reach the language server just now. Try again in a moment.')
     } finally {
       setIsSendingTalk(false)
       setLiveTranscript('')
+      setRecordingSeconds(0)
     }
+  }
+
+  const clearRecordingTimers = () => {
+    if (fallbackTimerRef.current) {
+      window.clearInterval(fallbackTimerRef.current)
+      fallbackTimerRef.current = null
+    }
+    if (recordingTickRef.current) {
+      window.clearInterval(recordingTickRef.current)
+      recordingTickRef.current = null
+    }
+    if (recordingTimeoutRef.current) {
+      window.clearTimeout(recordingTimeoutRef.current)
+      recordingTimeoutRef.current = null
+    }
+    if (recognitionRestartTimerRef.current) {
+      window.clearTimeout(recognitionRestartTimerRef.current)
+      recognitionRestartTimerRef.current = null
+    }
+  }
+
+  const stopMediaStream = () => {
+    if (!mediaStreamRef.current) {
+      return
+    }
+
+    mediaStreamRef.current.getTracks().forEach((track) => track.stop())
+    mediaStreamRef.current = null
+  }
+
+  const stopBrowserRecognition = () => {
+    clearRecordingTimers()
+    recordingModeRef.current = null
+
+    if (!recognitionRef.current) {
+      return
+    }
+
+    const recognition = recognitionRef.current
+    recognitionRef.current = null
+    recognition.onresult = null
+    recognition.onerror = null
+    recognition.onend = null
+
+    try {
+      recognition.stop()
+    } catch {
+      reportTalkDebug('C', '[DEBUG] recognition.stop threw while cleaning up')
+    }
+  }
+
+  const finalizeMediaRecording = async (mimeType: string) => {
+    clearRecordingTimers()
+    const finalTranscript = liveTranscriptRef.current.trim()
+    const audioBlob =
+      audioChunksRef.current.length > 0
+        ? new Blob(audioChunksRef.current, { type: mimeType || 'audio/webm' })
+        : null
+
+    audioChunksRef.current = []
+    stopBrowserRecognition()
+    stopMediaStream()
+    mediaRecorderRef.current = null
+    recordingModeRef.current = null
+    setIsRecording(false)
+    setRecordingSeconds(0)
+    stopRequestedRef.current = false
+
+    reportTalkDebug('A', '[DEBUG] finalize media recording', {
+      hasTranscript: Boolean(finalTranscript),
+      audioBlobSize: audioBlob?.size ?? 0,
+      mimeType: mimeType || 'audio/webm',
+    })
+
+    let audioDataUrl: string | null = null
+    if (audioBlob) {
+      try {
+        audioDataUrl = await blobToDataUrl(audioBlob)
+      } catch {
+        reportTalkDebug('C', '[DEBUG] failed to serialize recorded audio')
+      }
+    }
+
+    if (finalTranscript) {
+      void submitTranscript(finalTranscript, audioDataUrl)
+      return
+    }
+
+    if (audioDataUrl) {
+      setCurrentChatMessages((current) => [
+        ...current,
+        {
+          id: createMessageId(),
+          side: 'user',
+          text: 'Voice recorded, but transcript was unavailable this time.',
+          audioDataUrl,
+        },
+      ])
+      setRecordingNotice('这次录音已保存，但浏览器这次没有返回字幕。')
+    }
+
+    setLiveTranscript('')
+  }
+
+  const finishFallbackRecording = (shouldSubmit: boolean) => {
+    clearRecordingTimers()
+    recordingModeRef.current = null
+    setIsRecording(false)
+    const finalTranscript = liveTranscriptRef.current.trim()
+    if (shouldSubmit && finalTranscript) {
+      void submitTranscript(finalTranscript)
+    } else {
+      setLiveTranscript('')
+      setRecordingSeconds(0)
+    }
+  }
+
+  const startRecordingWatchers = (onTimeout: () => void) => {
+    setRecordingSeconds(0)
+    recordingTickRef.current = window.setInterval(() => {
+      setRecordingSeconds((current) => {
+        if (current >= 60) {
+          return 60
+        }
+        return current + 1
+      })
+    }, 1000)
+
+    recordingTimeoutRef.current = window.setTimeout(() => {
+      reportTalkDebug('E', '[DEBUG] recording timeout reached', {
+        mode: recordingModeRef.current,
+        seconds: 60,
+      })
+      onTimeout()
+    }, 60000)
+  }
+
+  const stopRecordingAndSubmit = () => {
+    reportTalkDebug('B', '[DEBUG] stopRecordingAndSubmit called', {
+      mode: recordingModeRef.current,
+      hasMediaRecorder: Boolean(mediaRecorderRef.current),
+    })
+
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      stopRequestedRef.current = true
+      clearRecordingTimers()
+      stopBrowserRecognition()
+      mediaRecorderRef.current.stop()
+      return
+    }
+
+    if (recordingModeRef.current === 'browser') {
+      stopRequestedRef.current = true
+      clearRecordingTimers()
+      stopBrowserRecognition()
+      setIsRecording(false)
+      setRecordingSeconds(0)
+      return
+    }
+
+    finishFallbackRecording(true)
   }
 
   const startFallbackRecording = () => {
     const targetText = transcriptSamples[talkMode]
     let index = 0
-    cancelRecordingRef.current = false
+    stopRequestedRef.current = false
+    recordingModeRef.current = 'fallback'
     setLiveTranscript('')
+    setRecordingNotice(null)
     setIsRecording(true)
+    if (typeof window !== 'undefined') {
+      stopUserAudioPlayback()
+      window.speechSynthesis.cancel()
+      setSpeakingText(null)
+    }
 
-    const timer = window.setInterval(() => {
-      if (cancelRecordingRef.current) {
-        window.clearInterval(timer)
-        return
-      }
-
+    fallbackTimerRef.current = window.setInterval(() => {
       index += 1
       const nextText = targetText.slice(0, index)
       setLiveTranscript(nextText)
 
       if (index >= targetText.length) {
-        window.clearInterval(timer)
-        setIsRecording(false)
-        void submitTranscript(targetText)
+        finishFallbackRecording(true)
       }
     }, 55)
+
+    startRecordingWatchers(() => finishFallbackRecording(true))
   }
 
-  const startRecording = () => {
+  const startBrowserRecognition = () => {
     if (typeof window === 'undefined') {
-      startFallbackRecording()
       return
     }
 
@@ -716,54 +1070,191 @@ function App() {
       browserWindow.SpeechRecognition ?? browserWindow.webkitSpeechRecognition
 
     if (!SpeechRecognitionCtor) {
-      startFallbackRecording()
+      reportTalkDebug('D', '[DEBUG] SpeechRecognition unavailable')
+      setRecordingNotice('当前浏览器不支持实时字幕，这次会先保留语音录音。')
       return
     }
 
-    cancelRecordingRef.current = false
-    setLiveTranscript('')
     const recognition = new SpeechRecognitionCtor()
     recognition.lang = 'en-US'
     recognition.interimResults = true
-    recognition.continuous = false
+    recognition.continuous = true
 
     recognition.onresult = (event) => {
       const transcript = Array.from(event.results)
         .map((result) => result[0]?.transcript ?? '')
         .join(' ')
-      setLiveTranscript(transcript.trim())
+        .trim()
+
+      reportTalkDebug('A', '[DEBUG] recognition.onresult', {
+        length: transcript.length,
+      })
+      setRecordingNotice(null)
+      setLiveTranscript(transcript)
     }
 
-    recognition.onerror = () => {
-      setIsRecording(false)
+    recognition.onerror = (event) => {
+      reportTalkDebug('D', '[DEBUG] recognition.onerror', {
+        error: event?.error ?? 'unknown',
+        stopRequested: stopRequestedRef.current,
+      })
+
+      if (stopRequestedRef.current) {
+        return
+      }
+
+      setRecordingNotice('实时字幕暂时不稳定，但录音仍在继续。')
     }
 
     recognition.onend = () => {
-      const finalTranscript = liveTranscriptRef.current.trim()
-      setIsRecording(false)
-      recognitionRef.current = null
-      if (!cancelRecordingRef.current && finalTranscript) {
-        void submitTranscript(finalTranscript)
-      } else {
-        setLiveTranscript('')
+      reportTalkDebug('A', '[DEBUG] recognition.onend', {
+        stopRequested: stopRequestedRef.current,
+        isRecording: mediaRecorderRef.current?.state ?? 'inactive',
+      })
+
+      if (
+        stopRequestedRef.current ||
+        !mediaRecorderRef.current ||
+        mediaRecorderRef.current.state === 'inactive'
+      ) {
+        recognitionRef.current = null
+        recordingModeRef.current = null
+        return
       }
+
+      recognitionRestartTimerRef.current = window.setTimeout(() => {
+        if (
+          stopRequestedRef.current ||
+          !recognitionRef.current ||
+          !mediaRecorderRef.current ||
+          mediaRecorderRef.current.state === 'inactive'
+        ) {
+          return
+        }
+
+        try {
+          recognitionRef.current.start()
+          reportTalkDebug('A', '[DEBUG] recognition restart success')
+        } catch (error) {
+          reportTalkDebug('A', '[DEBUG] recognition restart failed', {
+            error: error instanceof Error ? error.message : String(error),
+          })
+          recognitionRef.current = null
+          recordingModeRef.current = null
+          setRecordingNotice('实时字幕暂时不可用，但录音仍在继续。')
+        }
+      }, 200)
     }
 
     recognitionRef.current = recognition
-    setIsRecording(true)
-    recognition.start()
+    recordingModeRef.current = 'browser'
+
+    try {
+      recognition.start()
+      reportTalkDebug('A', '[DEBUG] recognition.start success')
+    } catch (error) {
+      reportTalkDebug('A', '[DEBUG] recognition.start failed', {
+        error: error instanceof Error ? error.message : String(error),
+      })
+      recognitionRef.current = null
+      recordingModeRef.current = null
+      setRecordingNotice('实时字幕暂时不可用，但录音仍在继续。')
+    }
   }
 
-  const toggleRecording = () => {
-    if (isRecording) {
-      cancelRecordingRef.current = true
-      recognitionRef.current?.stop()
-      setIsRecording(false)
-      setLiveTranscript('')
+  const startRecording = async () => {
+    if (typeof window === 'undefined') {
+      startFallbackRecording()
       return
     }
 
-    startRecording()
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      reportTalkDebug('D', '[DEBUG] MediaRecorder unavailable, fallback enabled')
+      startFallbackRecording()
+      return
+    }
+
+    stopRequestedRef.current = false
+    setLiveTranscript('')
+    setRecordingSeconds(0)
+    setRecordingNotice(null)
+    stopUserAudioPlayback()
+    window.speechSynthesis.cancel()
+    setSpeakingText(null)
+    audioChunksRef.current = []
+
+    reportTalkDebug('B', '[DEBUG] startRecording called', {
+      talkMode,
+    })
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      mediaStreamRef.current = stream
+
+      const preferredMimeType =
+        [
+          'audio/webm;codecs=opus',
+          'audio/webm',
+          'audio/mp4',
+          'audio/ogg;codecs=opus',
+        ].find((mimeType) => MediaRecorder.isTypeSupported(mimeType)) ?? ''
+      const recorder = preferredMimeType
+        ? new MediaRecorder(stream, { mimeType: preferredMimeType })
+        : new MediaRecorder(stream)
+
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          audioChunksRef.current.push(event.data)
+        }
+      }
+
+      recorder.onerror = () => {
+        reportTalkDebug('C', '[DEBUG] MediaRecorder error')
+        setRecordingNotice('录音过程中发生异常，请再试一次。')
+      }
+
+      recorder.onstop = () => {
+        void finalizeMediaRecording(recorder.mimeType)
+      }
+
+      mediaRecorderRef.current = recorder
+      recorder.start(250)
+      setIsRecording(true)
+      reportTalkDebug('A', '[DEBUG] MediaRecorder started', {
+        mimeType: recorder.mimeType || 'default',
+      })
+
+      startBrowserRecognition()
+      startRecordingWatchers(() => {
+        stopRequestedRef.current = true
+        stopBrowserRecognition()
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+          mediaRecorderRef.current.stop()
+        }
+      })
+    } catch (error) {
+      reportTalkDebug('D', '[DEBUG] getUserMedia failed', {
+        error: error instanceof Error ? error.message : String(error),
+      })
+      stopMediaStream()
+      setIsRecording(false)
+      setRecordingSeconds(0)
+      setRecordingNotice('浏览器没有成功获取麦克风权限，请检查授权后再试。')
+    }
+  }
+
+  const toggleRecording = () => {
+    reportTalkDebug('B', '[DEBUG] toggleRecording called', {
+      isRecording,
+      mode: recordingModeRef.current,
+    })
+
+    if (isRecording) {
+      stopRecordingAndSubmit()
+      return
+    }
+
+    void startRecording()
   }
 
   const handleWordSearch = async () => {
@@ -840,6 +1331,12 @@ function App() {
 
   const isRootTabView =
     isAssessmentComplete && !selectedWord && !selectedArticle && !selectedLesson
+  const recordingTimerLabel = `00:${String(Math.min(recordingSeconds, 60)).padStart(2, '0')} / 01:00`
+  const isAiSpeakingInTalk = Boolean(
+    activeTab === 'talk' &&
+      speakingText &&
+      chatMessages.some((message) => message.side === 'ai' && message.text === speakingText),
+  )
 
   return (
     <div className="app-shell">
@@ -1454,69 +1951,164 @@ function App() {
 
                   {activeTab === 'talk' && (
                     <section className="talk-screen">
-                      <div className="top-panel talk-top">
-                        <div>
-                          <span className="eyebrow">Talk With Me</span>
-                          <h2>American friend</h2>
+                      <div className="talk-header">
+                        <div className="top-panel talk-top">
+                          <div>
+                            <span className="eyebrow">Talk With Me</span>
+                            <h2>American friend</h2>
+                          </div>
+                          <span className="status-pill">{apiStatus === 'deepseek' ? 'DeepSeek' : 'Mock'}</span>
                         </div>
-                        <span className="status-pill">{apiStatus === 'deepseek' ? 'DeepSeek' : 'Mock'}</span>
+
+                        <div className="chip-row mode-filter-row">
+                          {(['Free Talk', 'Work', 'Meeting', 'Interview', 'Travel'] as TalkMode[]).map((mode) => (
+                            <button
+                              key={mode}
+                              type="button"
+                              className={`scene-chip ${talkMode === mode ? 'active' : ''}`}
+                              onClick={() => setTalkMode(mode)}
+                            >
+                              {mode}
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="context-banner">{talkContext}</div>
+
+                        <div className={`voice-status-strip ${isRecording ? 'is-recording' : isAiSpeakingInTalk ? 'is-speaking' : isSendingTalk ? 'is-thinking' : ''}`}>
+                          <div className="voice-status-strip__main">
+                            <span className="voice-status-dot" />
+                            <strong>
+                              {isRecording
+                                ? '正在听你说'
+                                : isAiSpeakingInTalk
+                                  ? 'AI 正在说话'
+                                  : isSendingTalk
+                                    ? 'AI 正在思考'
+                                    : '点击下方按钮开始语音聊天'}
+                            </strong>
+                          </div>
+                          <span className="voice-status-strip__meta">
+                            {isRecording ? recordingTimerLabel : `${talkMode} mode`}
+                          </span>
+                        </div>
                       </div>
 
-                      <div className="chip-row mode-filter-row">
-                        {(['Free Talk', 'Work', 'Meeting', 'Interview', 'Travel'] as TalkMode[]).map((mode) => (
-                          <button
-                            key={mode}
-                            type="button"
-                            className={`scene-chip ${talkMode === mode ? 'active' : ''}`}
-                            onClick={() => setTalkMode(mode)}
-                          >
-                            {mode}
-                          </button>
-                        ))}
-                      </div>
+                      <div ref={talkConversationRef} className="talk-conversation">
+                        {recordingNotice && <div className="recording-notice">{recordingNotice}</div>}
 
-                      <div className="context-banner">{talkContext}</div>
-
-                      <div className="chat-list">
-                        {chatMessages.map((message, index) => (
-                          <div
-                            key={`${message.side}-${index}`}
-                            className={`chat-bubble ${message.side === 'user' ? 'is-user' : 'is-ai'}`}
-                          >
-                            <p>{message.text}</p>
-                            {message.side === 'user' && message.text === 'My day is busy, I have too many meetings and I feel a little tired.' && (
-                              <div className="correction-card">
-                                <strong>A more natural way</strong>
-                                <span>My day has been busy. I had too many meetings, so I felt tired.</span>
+                        <div className={`chat-list ${chatMessages.length === 0 && !isSendingTalk ? 'is-empty' : ''}`}>
+                          {chatMessages.length === 0 && !isSendingTalk && (
+                            <div className="talk-empty-state">
+                              <div className="talk-empty-state__icon">
+                                <Icon name="mic" className="icon-md" />
                               </div>
-                            )}
-                          </div>
-                        ))}
-                        {isSendingTalk && (
-                          <div className="chat-bubble is-ai">
-                            <p>Thinking...</p>
-                          </div>
-                        )}
+                              <strong>开始第一轮对话</strong>
+                              <p>点击下方按钮直接开口说英语，系统会自动录音、转写并生成语音回复。</p>
+                            </div>
+                          )}
+                          {chatMessages.map((message, index) => {
+                            if (message.side === 'ai' && message.text.startsWith('A more natural way:')) {
+                              return (
+                                <div key={`${message.side}-${index}`} className="correction-card">
+                                  <strong>A more natural way</strong>
+                                  <span>{message.text.replace('A more natural way: ', '')}</span>
+                                </div>
+                              )
+                            }
+
+                            if (message.side === 'ai') {
+                              return (
+                                <div key={`${message.side}-${index}`} className="chat-bubble is-ai voice-message">
+                                  <div className="voice-message__toolbar">
+                                    <span>Voice reply</span>
+                                    <button
+                                      type="button"
+                                      className={`icon-circle ${speakingText === message.text ? 'is-active' : ''}`}
+                                      onClick={() => speakText(message.text)}
+                                      aria-label={speakingText === message.text ? '暂停播放' : '播放语音'}
+                                    >
+                                      <Icon
+                                        name={speakingText === message.text ? 'pause' : 'play'}
+                                        className="icon-sm"
+                                      />
+                                    </button>
+                                  </div>
+                                  <p>{message.text}</p>
+                                </div>
+                              )
+                            }
+
+                            return (
+                              <div
+                                key={message.id ?? `${message.side}-${index}`}
+                                className={`chat-bubble ${message.side === 'user' ? 'is-user voice-message voice-message--user' : 'is-ai'}`}
+                              >
+                                <div className="voice-message__toolbar user-voice-toolbar">
+                                  <span>Your voice</span>
+                                  {message.audioDataUrl ? (
+                                    <button
+                                      type="button"
+                                      className={`icon-circle ${playingUserAudioId === message.id ? 'is-active' : ''}`}
+                                      onClick={() =>
+                                        message.id && message.audioDataUrl
+                                          ? playUserAudio(message.id, message.audioDataUrl)
+                                          : undefined
+                                      }
+                                      aria-label={playingUserAudioId === message.id ? '暂停回放' : '播放录音'}
+                                    >
+                                      <Icon
+                                        name={playingUserAudioId === message.id ? 'pause' : 'play'}
+                                        className="icon-sm"
+                                      />
+                                    </button>
+                                  ) : (
+                                    <span className="voice-message__meta">Text only</span>
+                                  )}
+                                </div>
+                                <p>{message.text}</p>
+                              </div>
+                            )
+                          })}
+                          {isSendingTalk && (
+                            <div className="chat-bubble is-ai voice-message thinking-card">
+                              <div className="voice-message__toolbar">
+                                <span>Voice reply</span>
+                                <span className="thinking-dot" />
+                              </div>
+                              <p>Thinking...</p>
+                            </div>
+                          )}
+                          <div ref={chatEndRef} className="chat-list-end" aria-hidden="true" />
+                        </div>
                       </div>
 
                       <div className="talk-actions">
                         {isRecording && (
                           <div className="recording-panel">
                             <div className="recording-status">
-                              <span className="recording-dot" />
-                              <span>Recording...</span>
+                              <span className="recording-status__left">
+                                <span className="recording-dot" />
+                                <span>Recording...</span>
+                              </span>
+                              <span>{recordingTimerLabel}</span>
                             </div>
-                            <p>{liveTranscript || 'listening...'}</p>
+                            <div className="recording-wave" aria-hidden="true">
+                              {Array.from({ length: 12 }).map((_, index) => (
+                                <span key={`record-wave-${index}`} style={{ animationDelay: `${index * 0.08}s` }} />
+                              ))}
+                            </div>
+                            <p>{liveTranscript || 'Listening...'}</p>
                           </div>
                         )}
                         <button
                           type="button"
                           className={`record-button talk-record ${isRecording ? 'is-recording' : ''}`}
                           onClick={toggleRecording}
-                          aria-label={isRecording ? '取消录制' : '开始说话录制'}
+                          aria-label={isRecording ? '停止录制' : '开始说话录制'}
                         >
                           <Icon name="mic" className="icon-sm" />{' '}
-                          {isRecording ? '取消录制' : '开始说话'}
+                          {isRecording ? '停止录制' : '开始说话'}
                         </button>
                       </div>
                     </section>
