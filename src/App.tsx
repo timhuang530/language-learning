@@ -492,7 +492,6 @@ function App() {
   const [isSendingTalk, setIsSendingTalk] = useState(false)
   const [isLoadingDailyWords, setIsLoadingDailyWords] = useState(false)
   const [isLoadingReader, setIsLoadingReader] = useState(false)
-  const [isCoachSpeaking, setIsCoachSpeaking] = useState(false)
   const recognitionRef = useRef<BrowserSpeechRecognitionInstance | null>(null)
   const cancelRecordingRef = useRef(false)
   const liveTranscriptRef = useRef('')
@@ -630,35 +629,6 @@ function App() {
     setSearchHistory((current) => [nextItem, ...current].slice(0, 20))
   }
 
-  const speakCoachReply = (text: string) => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window) || !text.trim()) {
-      return
-    }
-
-    const synthesis = window.speechSynthesis
-    synthesis.cancel()
-
-    const utterance = new SpeechSynthesisUtterance(text)
-    utterance.lang = 'en-US'
-    utterance.rate = 0.98
-    utterance.pitch = 1
-
-    const voices = synthesis.getVoices()
-    const preferredVoice =
-      voices.find((voice) => voice.lang === 'en-US' && /male|david|alex|daniel|fred/i.test(voice.name)) ??
-      voices.find((voice) => voice.lang === 'en-US')
-
-    if (preferredVoice) {
-      utterance.voice = preferredVoice
-    }
-
-    utterance.onstart = () => setIsCoachSpeaking(true)
-    utterance.onend = () => setIsCoachSpeaking(false)
-    utterance.onerror = () => setIsCoachSpeaking(false)
-
-    synthesis.speak(utterance)
-  }
-
   const submitTranscript = async (transcript: string) => {
     if (!transcript.trim()) {
       return
@@ -691,11 +661,6 @@ function App() {
       }
 
       setChatMessages((current) => [...current, ...aiMessages])
-      const spokenCorrection = response.correction?.replace(/^A more natural way:\s*/i, '').trim()
-      const spokenReply = spokenCorrection
-        ? `A more natural way to say it is: ${spokenCorrection}. ${response.reply}`
-        : response.reply
-      speakCoachReply(spokenReply)
       rememberChat(talkMode, transcript.length > 36 ? `${transcript.slice(0, 36)}...` : transcript)
     } catch {
       setChatMessages((current) => [
@@ -705,7 +670,6 @@ function App() {
           text: 'I could not reach the language server just now. Try again in a moment.',
         },
       ])
-      speakCoachReply('I could not reach the language server just now. Try again in a moment.')
     } finally {
       setIsSendingTalk(false)
       setLiveTranscript('')
@@ -876,10 +840,6 @@ function App() {
 
   const isRootTabView =
     isAssessmentComplete && !selectedWord && !selectedArticle && !selectedLesson
-  const voiceRounds = useMemo(
-    () => chatMessages.filter((message) => message.side === 'user').length,
-    [chatMessages],
-  )
 
   return (
     <div className="app-shell">
@@ -1517,72 +1477,26 @@ function App() {
 
                       <div className="context-banner">{talkContext}</div>
 
-                      <div className="voice-room">
-                        <div className={`voice-avatar-card ${isCoachSpeaking ? 'is-speaking' : ''}`}>
-                          <div className="voice-avatar">
-                            <Icon name="mic" className="icon-md" />
+                      <div className="chat-list">
+                        {chatMessages.map((message, index) => (
+                          <div
+                            key={`${message.side}-${index}`}
+                            className={`chat-bubble ${message.side === 'user' ? 'is-user' : 'is-ai'}`}
+                          >
+                            <p>{message.text}</p>
+                            {message.side === 'user' && message.text === 'My day is busy, I have too many meetings and I feel a little tired.' && (
+                              <div className="correction-card">
+                                <strong>A more natural way</strong>
+                                <span>My day has been busy. I had too many meetings, so I felt tired.</span>
+                              </div>
+                            )}
                           </div>
-                          <div>
-                            <strong>American friend</strong>
-                            <p>
-                              {isCoachSpeaking
-                                ? '正在用语音回复你'
-                                : isSendingTalk
-                                  ? '正在思考下一句回复'
-                                  : '已准备好开始语音交流'}
-                            </p>
+                        ))}
+                        {isSendingTalk && (
+                          <div className="chat-bubble is-ai">
+                            <p>Thinking...</p>
                           </div>
-                        </div>
-
-                        <div className="voice-summary-card">
-                          <div>
-                            <span className="mini-text">Voice rounds</span>
-                            <strong>{voiceRounds}</strong>
-                          </div>
-                          <div>
-                            <span className="mini-text">Mode</span>
-                            <strong>{talkMode}</strong>
-                          </div>
-                        </div>
-
-                        <div className={`voice-stage-card ${isRecording ? 'is-live' : ''}`}>
-                          <div className="voice-stage-head">
-                            <strong>
-                              {isRecording
-                                ? 'Listening'
-                                : isSendingTalk
-                                  ? 'Thinking'
-                                  : isCoachSpeaking
-                                    ? 'Speaking'
-                                    : 'Ready'}
-                            </strong>
-                            <span>
-                              {isRecording
-                                ? '正在收听你的声音'
-                                : isSendingTalk
-                                  ? '正在生成回复'
-                                  : isCoachSpeaking
-                                    ? 'AI 正在朗读回复'
-                                    : '点击下方按钮开始说话'}
-                            </span>
-                          </div>
-
-                          <div className="voice-wave" aria-hidden="true">
-                            {Array.from({ length: 12 }).map((_, index) => (
-                              <span
-                                key={`wave-${index}`}
-                                className={
-                                  isRecording || isCoachSpeaking || isSendingTalk ? 'is-animated' : ''
-                                }
-                                style={{ animationDelay: `${index * 0.08}s` }}
-                              />
-                            ))}
-                          </div>
-
-                          <p className="voice-stage-note">
-                            对话内容内部仍会转写给模型，但页面不展示文字聊天气泡。
-                          </p>
-                        </div>
+                        )}
                       </div>
 
                       <div className="talk-actions">
@@ -1592,15 +1506,7 @@ function App() {
                               <span className="recording-dot" />
                               <span>Recording...</span>
                             </div>
-                            <div className="voice-wave compact" aria-hidden="true">
-                              {Array.from({ length: 10 }).map((_, index) => (
-                                <span
-                                  key={`recording-wave-${index}`}
-                                  className="is-animated"
-                                  style={{ animationDelay: `${index * 0.06}s` }}
-                                />
-                              ))}
-                            </div>
+                            <p>{liveTranscript || 'listening...'}</p>
                           </div>
                         )}
                         <button
