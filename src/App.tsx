@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
-import { healthcheck, searchVocabulary, sendTalkMessage } from './lib/api'
+import { fetchDailyVocabulary, fetchReaderFeed, healthcheck, searchVocabulary, sendTalkMessage } from './lib/api'
 import { usePersistentState } from './lib/storage'
 
 type MainTab = 'vocabulary' | 'reader' | 'talk' | 'grammar' | 'history'
@@ -217,7 +217,7 @@ const vocabularySeed: VocabularyItem[] = [
   },
 ]
 
-const readerItems: ReaderItem[] = [
+const readerSeed: ReaderItem[] = [
   {
     id: 'speech-habits',
     title: 'How Small Habits Shape Better Workdays',
@@ -485,9 +485,13 @@ function App() {
   const [chatMessages, setChatMessages] = usePersistentState<ChatMessage[]>('ll.chatMessages', initialChat)
   const [chatHistory, setChatHistory] = usePersistentState<ChatHistoryItem[]>('ll.chatHistory', [])
   const [searchHistory, setSearchHistory] = usePersistentState<SearchHistoryItem[]>('ll.searchHistory', [])
+  const [dailyWords, setDailyWords] = usePersistentState<VocabularyItem[]>('ll.dailyWords', [])
+  const [readerItems, setReaderItems] = usePersistentState<ReaderItem[]>('ll.readerItems', readerSeed)
   const [apiStatus, setApiStatus] = useState<'checking' | 'deepseek' | 'mock'>('checking')
   const [isSearchingWord, setIsSearchingWord] = useState(false)
   const [isSendingTalk, setIsSendingTalk] = useState(false)
+  const [isLoadingDailyWords, setIsLoadingDailyWords] = useState(false)
+  const [isLoadingReader, setIsLoadingReader] = useState(false)
   const recognitionRef = useRef<BrowserSpeechRecognitionInstance | null>(null)
   const cancelRecordingRef = useRef(false)
   const liveTranscriptRef = useRef('')
@@ -506,6 +510,48 @@ function App() {
       .then((result) => setApiStatus(result.provider === 'deepseek' ? 'deepseek' : 'mock'))
       .catch(() => setApiStatus('mock'))
   }, [])
+
+  useEffect(() => {
+    const loadDynamicContent = async () => {
+      setIsLoadingDailyWords(true)
+      setIsLoadingReader(true)
+
+      try {
+        const [daily, reader] = await Promise.all([
+          fetchDailyVocabulary({
+            scenes: ['Daily', 'Work', 'Meeting', 'Interview', 'Travel'],
+            level: '适合母语 6-7 年级',
+          }),
+          fetchReaderFeed({
+            scenes: ['Work', 'Travel', 'Meeting'],
+            level: '适合母语 6-7 年级',
+          }),
+        ])
+
+        setDailyWords(
+          daily.items.map((item, index) => ({
+            ...item,
+            id: item.id || `${item.term.toLowerCase().replace(/\s+/g, '-')}-${index}`,
+          })),
+        )
+
+        setReaderItems(
+          reader.items.map((item, index) => ({
+            ...item,
+            id: item.id || `reader-${index}`,
+          })),
+        )
+      } catch {
+        setDailyWords(vocabularySeed.slice(0, 5))
+        setReaderItems(readerSeed)
+      } finally {
+        setIsLoadingDailyWords(false)
+        setIsLoadingReader(false)
+      }
+    }
+
+    void loadDynamicContent()
+  }, [setDailyWords, setReaderItems])
 
   useEffect(() => {
     liveTranscriptRef.current = liveTranscript
@@ -746,7 +792,11 @@ function App() {
   }
 
   const filteredVocabulary = useMemo(() => {
-    return vocabularySeed.filter((item) => {
+    const mergedVocabulary = [...dailyWords, ...vocabularySeed].filter(
+      (item, index, list) => list.findIndex((candidate) => candidate.term === item.term) === index,
+    )
+
+    return mergedVocabulary.filter((item) => {
       const sceneMatch = selectedScene === 'All' || item.scene === selectedScene
       const keyword = searchInput.trim().toLowerCase()
 
@@ -781,8 +831,12 @@ function App() {
   }, [readerCategory])
 
   const todayAddedWordCount = useMemo(() => {
-    return new Set([...systemAddedTodayIds, ...savedWords]).size
-  }, [savedWords])
+    return new Set([
+      ...dailyWords.map((item) => item.id),
+      ...systemAddedTodayIds,
+      ...savedWords,
+    ]).size
+  }, [dailyWords, savedWords])
 
   const isRootTabView =
     isAssessmentComplete && !selectedWord && !selectedArticle && !selectedLesson
@@ -1316,7 +1370,13 @@ function App() {
                       </div>
 
                       <div className="list-stack">
-                        {filteredVocabulary.map((item, index) => (
+                        {isLoadingDailyWords && (
+                          <article className="history-card">
+                            <strong>正在获取今日词汇</strong>
+                            <p>DeepSeek 正在根据你的场景生成新的词语卡片。</p>
+                          </article>
+                        )}
+                        {filteredVocabulary.map((item) => (
                           <button
                             key={item.id}
                             type="button"
@@ -1333,7 +1393,9 @@ function App() {
                             <p>{item.definitionZh}</p>
                             <div className="vocab-card__bottom">
                               <span>{savedWords.includes(item.id) ? '已收藏' : '查看词卡'}</span>
-                              {index < 2 && <span className="new-badge">New Today</span>}
+                              {dailyWords.some((daily) => daily.term === item.term) && (
+                                <span className="new-badge">New Today</span>
+                              )}
                             </div>
                           </button>
                         ))}
@@ -1365,6 +1427,12 @@ function App() {
                       </div>
 
                       <div className="list-stack">
+                        {isLoadingReader && (
+                          <article className="history-card">
+                            <strong>正在更新 Reader</strong>
+                            <p>DeepSeek 正在准备新的英文文章与演讲内容。</p>
+                          </article>
+                        )}
                         {filteredReaderItems.map((item) => (
                           <button
                             key={item.id}

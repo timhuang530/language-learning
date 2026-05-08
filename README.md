@@ -72,3 +72,50 @@ npm run build:server
 - 不要把 `.env` 提交到仓库
 - 前端不会直接暴露 DeepSeek key
 - 模型调用统一走服务端代理
+
+## 腾讯云部署建议
+
+推荐拆成两个服务：
+
+- 前端静态站点：部署到腾讯云静态网站托管或 COS + CDN
+- 后端 API：部署到腾讯云轻量应用服务器 / CVM / 云托管
+
+### 方式一：同机部署
+
+适合当前阶段，最省事。
+
+1. 服务器安装 Node.js 20+
+2. 拉取仓库
+3. 创建 `.env`
+4. 执行：
+
+```bash
+npm install
+npm run build
+node server/index.mjs
+```
+
+5. 用 Nginx：
+- 将前端 `dist/` 指向站点根目录
+- 将 `/api` 反向代理到 `http://localhost:8787`
+
+### 方式二：前后端分离
+
+- 前端：打包后上传到腾讯云静态站点
+- 后端：单独部署 Node 服务
+- 前端通过域名或网关访问后端 `/api`
+
+### 必要环境变量
+
+```bash
+DEEPSEEK_API_KEY=你的新 token
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+PORT=8787
+```
+
+### 上线前建议
+
+- 将当前这枚 DeepSeek token 立即轮换
+- 在服务器上只保留 `.env`，不要写入仓库
+- 给 Node 服务加 `pm2` 或 systemd 守护
+- 为 `/api` 配置 HTTPS 和反向代理

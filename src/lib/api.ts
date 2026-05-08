@@ -17,6 +17,21 @@ type VocabularyItem = {
 
 type TalkRequestMessage = { side: 'ai' | 'user'; text: string }
 
+type ReaderItem = {
+  id: string
+  title: string
+  source: string
+  level: string
+  minutes: string
+  tag: string
+  summary: string
+  keyWord: string
+  keyWordMeaning: string
+  sentence: string
+  sentenceZh: string
+  prompt: string
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     headers: {
@@ -62,4 +77,27 @@ export async function sendTalkMessage(input: {
       body: JSON.stringify(input),
     },
   )
+}
+
+export async function fetchDailyVocabulary(input: {
+  scenes: string[]
+  level: string
+}) {
+  return request<{ source: string; items: VocabularyItem[]; degraded?: boolean }>(
+    '/api/vocabulary/daily',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  )
+}
+
+export async function fetchReaderFeed(input: {
+  scenes: string[]
+  level: string
+}) {
+  return request<{ source: string; items: ReaderItem[]; degraded?: boolean }>('/api/reader/feed', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
 }
