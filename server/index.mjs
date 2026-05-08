@@ -6,12 +6,38 @@ import { fileURLToPath } from 'node:url'
 
 const app = express()
 const port = Number(process.env.PORT || 3000)
-const deepseekApiKey = process.env.DEEPSEEK_API_KEY
+const deepseekApiKey = process.env.DEEPSEEK_API_KEY?.trim()
 const deepseekBaseUrl = process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com'
 const currentFilePath = fileURLToPath(import.meta.url)
 const currentDir = path.dirname(currentFilePath)
 const distDir = path.resolve(currentDir, '../dist')
 const indexHtmlPath = path.join(distDir, 'index.html')
+let lastDeepSeekError = null
+let lastDeepSeekSuccessAt = null
+
+function getKeyStatus() {
+  if (!deepseekApiKey) {
+    return {
+      configured: false,
+      reason: 'missing_key',
+      maskedKey: null,
+    }
+  }
+
+  if (!deepseekApiKey.startsWith('sk-')) {
+    return {
+      configured: false,
+      reason: 'invalid_key_prefix',
+      maskedKey: `${deepseekApiKey.slice(0, 4)}***`,
+    }
+  }
+
+  return {
+    configured: true,
+    reason: 'ok',
+    maskedKey: `${deepseekApiKey.slice(0, 6)}***${deepseekApiKey.slice(-4)}`,
+  }
+}
 
 app.use(cors())
 app.use(express.json({ limit: '2mb' }))
@@ -155,8 +181,10 @@ function buildReaderFallback() {
 }
 
 async function requestDeepSeek(messages, responseFormat) {
-  if (!deepseekApiKey) {
-    throw new Error('missing_api_key')
+  const keyStatus = getKeyStatus()
+
+  if (!keyStatus.configured) {
+    throw new Error(keyStatus.reason)
   }
 
   const response = await fetch(`${deepseekBaseUrl}/chat/completions`, {
@@ -175,16 +203,33 @@ async function requestDeepSeek(messages, responseFormat) {
 
   if (!response.ok) {
     const message = await response.text()
+    lastDeepSeekError = {
+      at: new Date().toISOString(),
+      status: response.status,
+      message: message || 'deepseek_request_failed',
+    }
     throw new Error(message || 'deepseek_request_failed')
   }
 
-  return response.json()
+  const data = await response.json()
+  lastDeepSeekSuccessAt = new Date().toISOString()
+  lastDeepSeekError = null
+  return data
 }
 
 app.get('/api/health', (_req, res) => {
+  const keyStatus = getKeyStatus()
   res.json({
     ok: true,
-    provider: deepseekApiKey ? 'deepseek' : 'mock',
+    provider: keyStatus.configured ? 'deepseek' : 'mock',
+    deepseek: {
+      configured: keyStatus.configured,
+      reason: keyStatus.reason,
+      maskedKey: keyStatus.maskedKey,
+      baseUrl: deepseekBaseUrl,
+      lastSuccessAt: lastDeepSeekSuccessAt,
+      lastError: lastDeepSeekError,
+    },
   })
 })
 
