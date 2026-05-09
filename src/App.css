@@ -664,6 +664,26 @@
   background: #f1f5f9;
   white-space: nowrap;
   flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.soft-chip:disabled {
+  opacity: 0.6;
+  cursor: not-allowed !important;
+}
+
+.soft-chip.is-loading {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+.pulse-anim {
+  animation: pulse-opacity 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-opacity {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
 .detail-topbar {

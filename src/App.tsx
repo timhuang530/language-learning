@@ -551,6 +551,7 @@ function App() {
   const [dailyWords, setDailyWords] = usePersistentState<VocabularyItem[]>('ll.dailyWords', [])
   const [readerItems, setReaderItems] = usePersistentState<ReaderItem[]>('ll.readerItems', readerSeed)
   const [isSearchingWord, setIsSearchingWord] = useState(false)
+  const [isRelatedWordLoading, setIsRelatedWordLoading] = useState<string | null>(null)
   const [isSendingTalk, setIsSendingTalk] = useState(false)
   const [isLoadingDailyWords, setIsLoadingDailyWords] = useState(false)
   const [isLoadingReader, setIsLoadingReader] = useState(false)
@@ -1807,12 +1808,12 @@ function App() {
                             <button
                               key={item}
                               type="button"
-                              className="soft-chip"
+                              className={`soft-chip ${isRelatedWordLoading === item ? 'is-loading' : ''}`}
+                              disabled={isRelatedWordLoading !== null}
                               onClick={() => {
                                 setSearchInput(item)
                                 setSearchMode('direct')
-                                // Trigger the search process
-                                setIsSearchingWord(true)
+                                setIsRelatedWordLoading(item)
                                 searchVocabulary({ query: item, mode: 'direct' })
                                   .then((response) => {
                                     const newItem: VocabularyItem = {
@@ -1823,10 +1824,13 @@ function App() {
                                     rememberSearch(item, 'direct', savedWords.includes(newItem.id))
                                   })
                                   .catch(() => {})
-                                  .finally(() => setIsSearchingWord(false))
+                                  .finally(() => setIsRelatedWordLoading(null))
                               }}
-                              style={{ border: 'none', cursor: 'pointer', font: 'inherit' }}
+                              style={{ border: 'none', cursor: 'pointer', font: 'inherit', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                             >
+                              {isRelatedWordLoading === item && (
+                                <Icon name="sparkles" className="icon-sm pulse-anim" />
+                              )}
                               {item}
                             </button>
                           ))}
