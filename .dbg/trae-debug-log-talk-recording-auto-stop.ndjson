@@ -1,0 +1,155 @@
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "B", "location": "src/App.tsx", "msg": "[DEBUG] toggleRecording called", "data": {"isRecording": false, "mode": null}, "ts": 1778258597640}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "B", "location": "src/App.tsx", "msg": "[DEBUG] startRecording called", "data": {"talkMode": "Free Talk"}, "ts": 1778258597644}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] MediaRecorder started", "data": {"mimeType": "audio/webm;codecs=opus"}, "ts": 1778258597775}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.start success", "data": {}, "ts": 1778258597776}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 5}, "ts": 1778258598846}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 5}, "ts": 1778258599432}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 9}, "ts": 1778258599629}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 14}, "ts": 1778258599741}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 17}, "ts": 1778258599823}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 17}, "ts": 1778258600231}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 17}, "ts": 1778258600324}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 16}, "ts": 1778258600433}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 21}, "ts": 1778258600446}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 28}, "ts": 1778258600825}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 33}, "ts": 1778258600958}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 38}, "ts": 1778258600979}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 38}, "ts": 1778258601026}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 38}, "ts": 1778258601443}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "B", "location": "src/App.tsx", "msg": "[DEBUG] toggleRecording called", "data": {"isRecording": true, "mode": "browser"}, "ts": 1778258601575}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "B", "location": "src/App.tsx", "msg": "[DEBUG] stopRecordingAndSubmit called", "data": {"mode": "browser", "hasMediaRecorder": true}, "ts": 1778258601576}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] finalize media recording", "data": {"hasTranscript": true, "audioBlobSize": 60053, "mimeType": "audio/webm;codecs=opus"}, "ts": 1778258601587}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "B", "location": "src/App.tsx", "msg": "[DEBUG] toggleRecording called", "data": {"isRecording": false, "mode": null}, "ts": 1778258615224}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "B", "location": "src/App.tsx", "msg": "[DEBUG] startRecording called", "data": {"talkMode": "Free Talk"}, "ts": 1778258615225}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] MediaRecorder started", "data": {"mimeType": "audio/webm;codecs=opus"}, "ts": 1778258615343}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.start success", "data": {}, "ts": 1778258615344}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 3}, "ts": 1778258616613}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 7}, "ts": 1778258616716}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 15}, "ts": 1778258616757}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 16}, "ts": 1778258617073}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 16}, "ts": 1778258617180}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 15}, "ts": 1778258617292}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 21}, "ts": 1778258617722}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 25}, "ts": 1778258618007}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 29}, "ts": 1778258618086}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 34}, "ts": 1778258618114}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 37}, "ts": 1778258618198}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 37}, "ts": 1778258618283}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 37}, "ts": 1778258618597}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 37}, "ts": 1778258618799}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 42}, "ts": 1778258618812}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 42}, "ts": 1778258618910}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 47}, "ts": 1778258618958}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "B", "location": "src/App.tsx", "msg": "[DEBUG] toggleRecording called", "data": {"isRecording": true, "mode": "browser"}, "ts": 1778258619107}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "B", "location": "src/App.tsx", "msg": "[DEBUG] stopRecordingAndSubmit called", "data": {"mode": "browser", "hasMediaRecorder": true}, "ts": 1778258619108}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] finalize media recording", "data": {"hasTranscript": true, "audioBlobSize": 60053, "mimeType": "audio/webm;codecs=opus"}, "ts": 1778258619119}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "B", "location": "src/App.tsx", "msg": "[DEBUG] toggleRecording called", "data": {"isRecording": false, "mode": null}, "ts": 1778258640973}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "B", "location": "src/App.tsx", "msg": "[DEBUG] startRecording called", "data": {"talkMode": "Free Talk"}, "ts": 1778258640974}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] MediaRecorder started", "data": {"mimeType": "audio/webm;codecs=opus"}, "ts": 1778258641086}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.start success", "data": {}, "ts": 1778258641086}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 4}, "ts": 1778258642473}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 9}, "ts": 1778258642696}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 7}, "ts": 1778258643103}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 8}, "ts": 1778258643139}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 12}, "ts": 1778258643450}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 17}, "ts": 1778258643617}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 17}, "ts": 1778258644033}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 25}, "ts": 1778258644239}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 25}, "ts": 1778258644268}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 28}, "ts": 1778258644647}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 28}, "ts": 1778258644757}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 31}, "ts": 1778258644839}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 34}, "ts": 1778258645080}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 35}, "ts": 1778258645190}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 40}, "ts": 1778258645240}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 41}, "ts": 1778258645279}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 49}, "ts": 1778258645748}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 49}, "ts": 1778258645832}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 48}, "ts": 1778258646346}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 54}, "ts": 1778258646446}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 55}, "ts": 1778258646567}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 62}, "ts": 1778258646851}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 62}, "ts": 1778258647257}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 61}, "ts": 1778258647423}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 65}, "ts": 1778258648368}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 69}, "ts": 1778258648413}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 74}, "ts": 1778258648441}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "B", "location": "src/App.tsx", "msg": "[DEBUG] toggleRecording called", "data": {"isRecording": true, "mode": "browser"}, "ts": 1778258648607}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "B", "location": "src/App.tsx", "msg": "[DEBUG] stopRecordingAndSubmit called", "data": {"mode": "browser", "hasMediaRecorder": true}, "ts": 1778258648607}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] finalize media recording", "data": {"hasTranscript": true, "audioBlobSize": 119945, "mimeType": "audio/webm;codecs=opus"}, "ts": 1778258648614}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "B", "location": "src/App.tsx", "msg": "[DEBUG] toggleRecording called", "data": {"isRecording": false, "mode": null}, "ts": 1778258948795}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "B", "location": "src/App.tsx", "msg": "[DEBUG] startRecording called", "data": {"talkMode": "Free Talk"}, "ts": 1778258948798}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] MediaRecorder started", "data": {"mimeType": "audio/webm;codecs=opus"}, "ts": 1778258948922}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.start success", "data": {}, "ts": 1778258948923}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 5}, "ts": 1778258950006}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 11}, "ts": 1778258950519}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 12}, "ts": 1778258950588}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "B", "location": "src/App.tsx", "msg": "[DEBUG] toggleRecording called", "data": {"isRecording": true, "mode": "browser"}, "ts": 1778258950833}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "B", "location": "src/App.tsx", "msg": "[DEBUG] stopRecordingAndSubmit called", "data": {"mode": "browser", "hasMediaRecorder": true}, "ts": 1778258950834}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] finalize media recording", "data": {"hasTranscript": true, "audioBlobSize": 30107, "mimeType": "audio/webm;codecs=opus"}, "ts": 1778258950852}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "B", "location": "src/App.tsx", "msg": "[DEBUG] toggleRecording called", "data": {"isRecording": false, "mode": null}, "ts": 1778258961712}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "B", "location": "src/App.tsx", "msg": "[DEBUG] startRecording called", "data": {"talkMode": "Free Talk"}, "ts": 1778258961713}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] MediaRecorder started", "data": {"mimeType": "audio/webm;codecs=opus"}, "ts": 1778258961827}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.start success", "data": {}, "ts": 1778258961827}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 5}, "ts": 1778258963422}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 11}, "ts": 1778258963800}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 12}, "ts": 1778258964135}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 11}, "ts": 1778258964277}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 11}, "ts": 1778258964676}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "B", "location": "src/App.tsx", "msg": "[DEBUG] toggleRecording called", "data": {"isRecording": true, "mode": "browser"}, "ts": 1778258965195}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "B", "location": "src/App.tsx", "msg": "[DEBUG] stopRecordingAndSubmit called", "data": {"mode": "browser", "hasMediaRecorder": true}, "ts": 1778258965196}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] finalize media recording", "data": {"hasTranscript": true, "audioBlobSize": 53291, "mimeType": "audio/webm;codecs=opus"}, "ts": 1778258965211}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "B", "location": "src/App.tsx", "msg": "[DEBUG] toggleRecording called", "data": {"isRecording": false, "mode": null}, "ts": 1778259102660}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "B", "location": "src/App.tsx", "msg": "[DEBUG] startRecording called", "data": {"talkMode": "Free Talk"}, "ts": 1778259102662}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] MediaRecorder started", "data": {"mimeType": "audio/webm;codecs=opus"}, "ts": 1778259104517}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.start success", "data": {}, "ts": 1778259104518}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 5}, "ts": 1778259106676}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 8}, "ts": 1778259106782}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 13}, "ts": 1778259106901}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 17}, "ts": 1778259107195}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 21}, "ts": 1778259107408}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 21}, "ts": 1778259107423}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 21}, "ts": 1778259107788}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 28}, "ts": 1778259107974}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 33}, "ts": 1778259108200}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 38}, "ts": 1778259108355}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 38}, "ts": 1778259108554}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 38}, "ts": 1778259108666}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 37}, "ts": 1778259108858}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "B", "location": "src/App.tsx", "msg": "[DEBUG] toggleRecording called", "data": {"isRecording": true, "mode": "browser"}, "ts": 1778259108925}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "B", "location": "src/App.tsx", "msg": "[DEBUG] stopRecordingAndSubmit called", "data": {"mode": "browser", "hasMediaRecorder": true}, "ts": 1778259108925}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] finalize media recording", "data": {"hasTranscript": true, "audioBlobSize": 69713, "mimeType": "audio/webm;codecs=opus"}, "ts": 1778259108932}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "B", "location": "src/App.tsx", "msg": "[DEBUG] toggleRecording called", "data": {"isRecording": false, "mode": null}, "ts": 1778259114660}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "B", "location": "src/App.tsx", "msg": "[DEBUG] startRecording called", "data": {"talkMode": "Free Talk"}, "ts": 1778259114660}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] MediaRecorder started", "data": {"mimeType": "audio/webm;codecs=opus"}, "ts": 1778259114776}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.start success", "data": {}, "ts": 1778259114777}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 3}, "ts": 1778259115832}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 8}, "ts": 1778259116019}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 9}, "ts": 1778259116315}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 8}, "ts": 1778259116626}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 13}, "ts": 1778259117032}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 21}, "ts": 1778259117091}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 21}, "ts": 1778259117433}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 20}, "ts": 1778259117617}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 25}, "ts": 1778259118136}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 28}, "ts": 1778259118228}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 32}, "ts": 1778259118424}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 35}, "ts": 1778259118447}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "B", "location": "src/App.tsx", "msg": "[DEBUG] toggleRecording called", "data": {"isRecording": true, "mode": "browser"}, "ts": 1778259118460}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "B", "location": "src/App.tsx", "msg": "[DEBUG] stopRecordingAndSubmit called", "data": {"mode": "browser", "hasMediaRecorder": true}, "ts": 1778259118460}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] finalize media recording", "data": {"hasTranscript": true, "audioBlobSize": 58121, "mimeType": "audio/webm;codecs=opus"}, "ts": 1778259118466}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "B", "location": "src/App.tsx", "msg": "[DEBUG] toggleRecording called", "data": {"isRecording": false, "mode": null}, "ts": 1778259128377}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "B", "location": "src/App.tsx", "msg": "[DEBUG] startRecording called", "data": {"talkMode": "Free Talk"}, "ts": 1778259128377}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] MediaRecorder started", "data": {"mimeType": "audio/webm;codecs=opus"}, "ts": 1778259128491}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.start success", "data": {}, "ts": 1778259128491}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 4}, "ts": 1778259130000}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 8}, "ts": 1778259130137}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 9}, "ts": 1778259130335}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 8}, "ts": 1778259130640}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 13}, "ts": 1778259130950}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 20}, "ts": 1778259131642}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 23}, "ts": 1778259131659}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] recognition.onresult", "data": {"length": 26}, "ts": 1778259131853}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "B", "location": "src/App.tsx", "msg": "[DEBUG] toggleRecording called", "data": {"isRecording": true, "mode": "browser"}, "ts": 1778259132160}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "B", "location": "src/App.tsx", "msg": "[DEBUG] stopRecordingAndSubmit called", "data": {"mode": "browser", "hasMediaRecorder": true}, "ts": 1778259132160}
+{"sessionId": "talk-recording-auto-stop", "runId": "pre", "hypothesisId": "A", "location": "src/App.tsx", "msg": "[DEBUG] finalize media recording", "data": {"hasTranscript": true, "audioBlobSize": 58121, "mimeType": "audio/webm;codecs=opus"}, "ts": 1778259132172}

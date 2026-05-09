@@ -507,9 +507,13 @@
 .history-tab {
   border: 1px solid rgba(226, 232, 240, 0.9);
   background: rgba(255, 255, 255, 0.92);
-  color: #475569;
-  padding: 8px 12px;
+  color: #64748b;
+  padding: 8px 16px;
   cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .chip-row {
@@ -639,6 +643,7 @@
   color: #334155;
   background: #f1f5f9;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .detail-topbar {

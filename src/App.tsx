@@ -31,6 +31,7 @@ type ReaderItem = {
   minutes: string
   tag: string
   summary: string
+  articleBody?: string
   keyWord: string
   keyWordMeaning: string
   sentence: string
@@ -230,6 +231,7 @@ const readerSeed: ReaderItem[] = [
     minutes: '4 min',
     tag: 'Work',
     summary: '一篇轻量职场读物，讲日常小习惯如何影响专注力和沟通效率。',
+    articleBody: "In today's fast-paced corporate world, many professionals feel overwhelmed by endless meetings and constant notifications. However, recent studies suggest that a steady routine can lower stress and make hard tasks feel smaller. It's not about working longer hours, but rather creating small, predictable habits. For example, taking a five-minute walk before diving into a complex report, or setting strict 'no-email' boundaries during lunch. These micro-habits help the brain transition between different modes of thinking. People who keep a clear routine often make faster decisions and feel less exhausted by the end of the day. Ultimately, success isn't always about massive leaps; it's often the result of tiny, consistent steps.",
     keyWord: 'routine',
     keyWordMeaning: '固定做事节奏，日常习惯流程',
     sentence: 'A steady routine can lower stress and make hard tasks feel smaller.',
@@ -244,6 +246,7 @@ const readerSeed: ReaderItem[] = [
     minutes: '3 min',
     tag: 'Travel',
     summary: '一篇偏生活化的旅行短文，适合练地点描述、感受表达和见闻复述。',
+    articleBody: "There is something magical about exploring a new city on foot. Last weekend, we arrived in a historic European town just before dawn. The cobblestone streets were completely empty, and the only sound was the distant chime of a church bell. We wandered through quiet streets until the city slowly woke up. Local bakeries began to open their doors, releasing the irresistible aroma of fresh pastries. As the sun rose higher, the main square filled with vendors selling colorful flowers and handmade crafts. Traveling without a strict itinerary allowed us to discover hidden cafes and beautiful alleys that aren't mentioned in any guidebook. Sometimes, the best way to experience a place is to simply get lost in it.",
     keyWord: 'wander',
     keyWordMeaning: '闲逛，漫步，没有太强目的地到处看看',
     sentence: 'We wandered through quiet streets until the city slowly woke up.',
@@ -619,21 +622,29 @@ function App() {
           }),
         ])
 
-        const fetchedDaily = daily.items.map((item, index) => ({
+        const fetchedDaily = Array.isArray(daily.items) && daily.items.length > 0 
+          ? daily.items 
+          : vocabularySeed.slice(0, 5)
+
+        const mappedDaily = fetchedDaily.map((item, index) => ({
           ...item,
           id: item.id || `${item.term.toLowerCase().replace(/\s+/g, '-')}-${index}`,
         }))
         
-        setDailyWords(fetchedDaily)
+        setDailyWords(mappedDaily)
         
         setSavedWords((current) => {
-          const newIds = fetchedDaily.map((w: VocabularyItem) => w.id)
+          const newIds = mappedDaily.map((w: VocabularyItem) => w.id)
           const combined = new Set([...current, ...newIds])
           return Array.from(combined)
         })
 
+        const fetchedReader = Array.isArray(reader.items) && reader.items.length > 0
+          ? reader.items
+          : readerSeed
+
         setReaderItems(
-          reader.items.map((item, index) => ({
+          fetchedReader.map((item, index) => ({
             ...item,
             id: item.id || `reader-${index}`,
           })),
@@ -836,6 +847,36 @@ function App() {
     }
 
     setSearchHistory((current) => [nextItem, ...current].slice(0, 20))
+  }
+
+  const initiateTalkWithAI = async (mode: TalkMode, contextMsg: string) => {
+    setActiveTab('talk')
+    setTalkMode(mode)
+    setTalkContext(contextMsg)
+    setIsSendingTalk(true)
+
+    try {
+      const response = await sendTalkMessage({
+        mode,
+        context: contextMsg,
+        transcript: `[System: The user just entered this conversation. Please initiate the discussion based on the context: "${contextMsg}"]`,
+        messages: [],
+      })
+
+      const aiMessages: ChatMessage[] = [{ id: createMessageId(), side: 'ai', text: response.reply }]
+      setCurrentChatMessages(aiMessages)
+      speakText(response.reply)
+    } catch {
+      setCurrentChatMessages([
+        {
+          id: createMessageId(),
+          side: 'ai',
+          text: 'I could not reach the language server just now. Try again in a moment.',
+        },
+      ])
+    } finally {
+      setIsSendingTalk(false)
+    }
   }
 
   const submitTranscript = async (transcript: string, audioDataUrl?: string | null) => {
@@ -1732,7 +1773,7 @@ function App() {
                           <h3>例句</h3>
                           <span className="mini-text">2</span>
                         </div>
-                        {selectedWord.examples.map((example) => (
+                        {Array.isArray(selectedWord.examples) && selectedWord.examples.map((example) => (
                           <div key={example.en} className="example-card">
                             <div className="example-row">
                               <strong>{example.en}</strong>
@@ -1762,7 +1803,7 @@ function App() {
                       <section className="content-card compact-card">
                         <h3>相关词</h3>
                         <div className="chip-row">
-                          {selectedWord.related.map((item) => (
+                          {Array.isArray(selectedWord.related) && selectedWord.related.map((item) => (
                             <span key={item} className="soft-chip">
                               {item}
                             </span>
@@ -1788,10 +1829,8 @@ function App() {
                       type="button"
                       className="primary-button"
                       onClick={() => {
-                        setActiveTab('talk')
-                        setTalkMode('Free Talk')
-                        setTalkContext(`围绕单词 ${selectedWord.term} 发起一段自然对话`)
                         setSelectedWord(null)
+                        void initiateTalkWithAI('Free Talk', `围绕单词 ${selectedWord.term} 发起一段自然对话`)
                       }}
                     >
                       Talk With This Word
@@ -1831,37 +1870,42 @@ function App() {
                     <div className="detail-body">
                       <section className="content-card compact-card">
                         <h3>文章</h3>
-                        <p>
-                          A small{' '}
-                          <button
-                            type="button"
-                            className="text-token"
-                            onClick={() =>
-                              setReaderSelection({
-                                type: 'word',
-                                label: selectedArticle.keyWord,
-                                detail: selectedArticle.keyWordMeaning,
-                              } as ReaderSelection)
-                            }
-                          >
-                            {selectedArticle.keyWord}
-                          </button>{' '}
-                          can make the entire workday feel calmer. People who keep a clear routine often
-                          make faster decisions and feel less overwhelmed in meetings.
+                        <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6, color: 'var(--color-text-primary)' }}>
+                          {selectedArticle.articleBody || (
+                            <>
+                              A small{' '}
+                              <button
+                                type="button"
+                                className="text-token"
+                                onClick={() =>
+                                  setReaderSelection({
+                                    type: 'word',
+                                    label: selectedArticle.keyWord,
+                                    detail: selectedArticle.keyWordMeaning,
+                                  } as ReaderSelection)
+                                }
+                              >
+                                {selectedArticle.keyWord}
+                              </button>{' '}
+                              can make the entire workday feel calmer. People who keep a clear routine often
+                              make faster decisions and feel less overwhelmed in meetings.
+                              <br /><br />
+                              <button
+                                type="button"
+                                className="sentence-token"
+                                onClick={() =>
+                                  setReaderSelection({
+                                    type: 'sentence',
+                                    label: selectedArticle.sentence,
+                                    detail: selectedArticle.sentenceZh,
+                                  } as ReaderSelection)
+                                }
+                              >
+                                {selectedArticle.sentence}
+                              </button>
+                            </>
+                          )}
                         </p>
-                        <button
-                          type="button"
-                          className="sentence-token"
-                          onClick={() =>
-                            setReaderSelection({
-                              type: 'sentence',
-                              label: selectedArticle.sentence,
-                              detail: selectedArticle.sentenceZh,
-                            } as ReaderSelection)
-                          }
-                        >
-                          {selectedArticle.sentence}
-                        </button>
                       </section>
 
                       <section className="content-card compact-card">
@@ -1916,9 +1960,9 @@ function App() {
                       type="button"
                       className="primary-button"
                       onClick={() => {
-                        setActiveTab('talk')
-                        setTalkContext(`围绕文章主题继续聊天：${selectedArticle.prompt}`)
+                        const contextMsg = `围绕文章主题继续聊天：${selectedArticle.prompt}`
                         setSelectedArticle(null)
+                        void initiateTalkWithAI('Free Talk', contextMsg)
                       }}
                     >
                       Discuss This

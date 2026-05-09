@@ -103,6 +103,7 @@ const fallbackReaderItems = [
     minutes: '4 min',
     tag: 'Work',
     summary: '一篇轻量职场读物，讲日常小习惯如何影响专注力和沟通效率。',
+    articleBody: "In today's fast-paced corporate world, many professionals feel overwhelmed by endless meetings and constant notifications. However, recent studies suggest that a steady routine can lower stress and make hard tasks feel smaller. It's not about working longer hours, but rather creating small, predictable habits. For example, taking a five-minute walk before diving into a complex report, or setting strict 'no-email' boundaries during lunch. These micro-habits help the brain transition between different modes of thinking. People who keep a clear routine often make faster decisions and feel less exhausted by the end of the day. Ultimately, success isn't always about massive leaps; it's often the result of tiny, consistent steps.",
     keyWord: 'routine',
     keyWordMeaning: '固定做事节奏，日常习惯流程',
     sentence: 'A steady routine can lower stress and make hard tasks feel smaller.',
@@ -117,6 +118,7 @@ const fallbackReaderItems = [
     minutes: '3 min',
     tag: 'Travel',
     summary: '一篇偏生活化的旅行短文，适合练地点描述、感受表达和见闻复述。',
+    articleBody: "There is something magical about exploring a new city on foot. Last weekend, we arrived in a historic European town just before dawn. The cobblestone streets were completely empty, and the only sound was the distant chime of a church bell. We wandered through quiet streets until the city slowly woke up. Local bakeries began to open their doors, releasing the irresistible aroma of fresh pastries. As the sun rose higher, the main square filled with vendors selling colorful flowers and handmade crafts. Traveling without a strict itinerary allowed us to discover hidden cafes and beautiful alleys that aren't mentioned in any guidebook. Sometimes, the best way to experience a place is to simply get lost in it.",
     keyWord: 'wander',
     keyWordMeaning: '闲逛，漫步，没有太强目的地到处看看',
     sentence: 'We wandered through quiet streets until the city slowly woke up.',
@@ -364,7 +366,7 @@ app.post('/api/reader/feed', async (req, res) => {
         {
           role: 'system',
           content:
-            '你是英语学习产品的 Reader 内容编辑。请严格输出 JSON，顶层字段为 items。items 是 2 到 4 篇文章的数组。\n要求：\n1. 内容必须是非常贴近真实世界的近期新闻、科技前沿、职场趋势或真实生活方式文章（可以基于你所知的真实世界知识生成高度逼真的新闻或文章节选）。\n2. 绝对不要使用像 "Lily plans a trip" 这种小学生课本式的幼稚内容。\n3. 每个 item 包含: id, title, source(如 BBC News, TechCrunch), level, minutes, tag(如 Tech, World, Career), summary(中文摘要), keyWord, keyWordMeaning, sentence, sentenceZh, prompt(用于口语讨论的引导词)。',
+            '你是英语学习产品的 Reader 内容编辑。请严格输出 JSON，顶层字段为 items。items 是 2 到 4 篇文章的数组。\n要求：\n1. 内容必须是非常贴近真实世界的近期新闻、科技前沿、职场趋势或真实生活方式文章（可以基于你所知的真实世界知识生成高度逼真的新闻或文章节选）。\n2. 绝对不要使用像 "Lily plans a trip" 这种小学生课本式的幼稚内容。\n3. 每个 item 包含: id, title, source(如 BBC News, TechCrunch), level, minutes, tag(如 Tech, World, Career), summary(中文摘要), articleBody(英文正文，至少150字), keyWord, keyWordMeaning, sentence, sentenceZh, prompt(用于口语讨论的引导词)。',
         },
         {
           role: 'user',
@@ -568,7 +570,9 @@ app.post('/api/talk', async (req, res) => {
   if (!deepseekApiKey) {
     return res.json({
       source: 'mock',
-      reply: `I heard you say: "${transcript}". Let's keep going in ${mode} mode. ${context ? `We can also stay around this topic: ${context}.` : ''}`,
+      reply: transcript.startsWith('[System:')
+        ? `Let's discuss this topic. What are your thoughts?`
+        : `I heard you say: "${transcript}". Let's keep going in ${mode} mode. ${context ? `We can also stay around this topic: ${context}.` : ''}`,
       correction:
         transcript.toLowerCase().includes('my day is busy')
           ? 'A more natural way: My day has been busy.'
@@ -608,7 +612,9 @@ app.post('/api/talk', async (req, res) => {
     res.json({
       source: 'mock',
       degraded: true,
-      reply: `I heard you say: "${transcript}". Tell me a little more about that.`,
+      reply: transcript.startsWith('[System:')
+        ? `Let's discuss this topic. Tell me more.`
+        : `I heard you say: "${transcript}". Tell me a little more about that.`,
       correction: null,
       error: error instanceof Error ? error.message : 'unknown_error',
     })
