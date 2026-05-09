@@ -46,12 +46,12 @@ const fallbackDictionary = {
   compromise: {
     term: 'compromise',
     phonetic: '/ˈkɑːmprəmaɪz/',
-    partOfSpeech: 'n. / v.',
+    partOfSpeech: '名词/动词 (noun/verb)',
     definitionZh: '妥协，折中。双方各退一步，最后找到一个都能接受的中间方案。',
     scene: 'Work',
     imageLabel: 'Team discussion with two people meeting in the middle',
     usage:
-      '这个词在工作、会议和关系沟通里都很常见。它带有一种“不是最完美，但大家可以继续往前走”的感觉。',
+      '常见搭配：reach a compromise (达成妥协)，make a compromise (做出让步)。作为动词时可以接 on something。',
     culture:
       '在英语语境里，愿意 compromise 通常会让你显得成熟、合作，而不是没主见。',
     related: ['agreement', 'middle ground', 'negotiation'],
@@ -71,12 +71,12 @@ const fallbackDictionary = {
   itinerary: {
     term: 'itinerary',
     phonetic: '/aɪˈtɪnəreri/',
-    partOfSpeech: 'n.',
+    partOfSpeech: '名词 (noun)',
     definitionZh: '行程安排。通常是旅行中每天要去哪里、做什么的计划。',
     scene: 'Travel',
     imageLabel: 'Travel itinerary with landmarks and schedule',
     usage:
-      '旅游英语里很常见，既可以指完整行程，也可以指机票或酒店确认中的行程信息。',
+      '作为名词使用。旅游英语里很常见，既可以指完整行程，也可以指机票或酒店确认中的行程信息。搭配：plan an itinerary (制定行程)。',
     culture:
       '如果你说 my itinerary changed，对方会默认你整个旅行安排有调整，不只是一个小预约变了。',
     related: ['schedule', 'plan', 'travel plan'],
@@ -136,27 +136,24 @@ function buildDictionaryFallback(query, mode) {
   }
 
   return {
-    term: mode === 'describe' ? 'follow-up' : query.trim() || 'follow-up',
-    phonetic: '/ˈfɑːloʊ ʌp/',
-    partOfSpeech: 'n. / v.',
-    definitionZh:
-      mode === 'describe'
-        ? '跟进，后续追踪。常用于工作里表示事情没有停在第一次沟通，而是继续推进。'
-        : '这是一个 demo 占位词卡；真实模式下会由大模型返回完整解释。',
+    term: mode === 'describe' ? 'procrastinate' : query.trim() || 'procrastinate',
+    phonetic: '/prəˈkræstɪneɪt/',
+    partOfSpeech: '动词 (verb)',
+    definitionZh: '拖延。总是把该做的事情推到最后一刻才做。',
     scene: 'Work',
-    imageLabel: 'Manager sending a follow-up note after meeting',
-    usage: '工作英语里特别高频，邮件、会议、项目推进里都很常见，掌握后非常实用。',
-    culture: '说 I will follow up 显得很可靠，也很有执行力，比说 I will check later 更专业。',
-    related: ['check in', 'circle back', 'update'],
-    confusing: 'check in 偏轻松确认，follow-up 更像带着任务和结果去推进。',
+    imageLabel: 'a person looking stressed at a clock',
+    usage: '用作不及物动词。常用于描述工作、学习中未能按时完成任务的情况。常见搭配：procrastinate on something (在某事上拖延)。',
+    culture: '在现代职场和学习中常被视为一个负面习惯，但在非正式聊天中经常用来互相调侃。',
+    related: ['delay', 'postpone', 'put off'],
+    confusing: 'delay (偏客观的延迟) vs procrastinate (偏主观的、有意的拖延)',
     examples: [
       {
-        en: 'I will send a follow-up email after the meeting.',
-        zh: '会后我会发一封跟进邮件。',
+        en: "I always procrastinate when I have a difficult project.",
+        zh: '遇到困难的项目时，我总是拖延。',
       },
       {
-        en: 'Can you follow up with the client tomorrow?',
-        zh: '你明天可以跟进一下客户吗？',
+        en: "Stop procrastinating and get back to work!",
+        zh: '别拖延了，快回去工作！',
       },
     ],
   }
@@ -252,8 +249,32 @@ app.post('/api/vocabulary/search', async (req, res) => {
       [
         {
           role: 'system',
-          content:
-            '你是一个英语学习词卡生成器。请严格输出 JSON，不要输出 markdown。字段必须包含 term, phonetic, partOfSpeech, definitionZh, scene, imageLabel, usage, culture, related, confusing, examples。examples 必须是长度为 2 的数组，每项包含 en 和 zh。',
+          content: `你是一个专业的英语母语外教。请解释单词/短语 "${query}"。
+要求：
+1. 语言自然、生动有趣，避免教条化。
+2. definitionZh 是该词汇在具体语境下的中文自然解释。
+3. partOfSpeech 必须是"中文 (英文)"格式，如"名词 (noun)", "动词 (verb)"。
+4. imageLabel 是用于给AI绘画模型生成插图的英文提示词，必须是简短、具象的视觉描述（例如 "a calendar with events listed"）。
+5. usage 是对用法的详细说明，必须介绍该词语作为此词性时的搭配习惯、常见短语、适用场景和注意事项。绝对不要仅仅返回一个例句，必须是一段中文为主的说明性文字。
+6. culture 解释文化背景或语气差异。
+7. confusing 解释容易混淆的词。
+8. 严格返回 JSON 对象，遵循以下字段结构：
+{
+  "term": "单词",
+  "phonetic": "音标",
+  "partOfSpeech": "词性(双语)",
+  "definitionZh": "中文释义",
+  "scene": "所属场景分类(如 Work, Daily)",
+  "imageLabel": "英文视觉描述",
+  "usage": "详细用法说明与搭配",
+  "culture": "文化背景/语气",
+  "related": ["相关词1", "相关词2"],
+  "confusing": "易混词解释",
+  "examples": [
+    { "en": "例句1", "zh": "中文翻译1" },
+    { "en": "例句2", "zh": "中文翻译2" }
+  ]
+}`,
         },
         {
           role: 'user',
@@ -294,8 +315,14 @@ app.post('/api/vocabulary/daily', async (req, res) => {
       [
         {
           role: 'system',
-          content:
-            '你是英语学习产品的每日词汇推荐引擎。请严格输出 JSON，顶层字段为 items。items 是长度为 5 的数组。每个 item 必须包含 term, phonetic, partOfSpeech, definitionZh, scene, imageLabel, usage, culture, related, confusing, examples。examples 必须是长度为 2 的数组，每项包含 en 和 zh。',
+          content: `你是英语学习产品的每日词汇推荐引擎。请严格输出 JSON，顶层字段为 items。items 是长度为 5 的数组。
+要求：
+1. 语言自然、生动有趣。
+2. definitionZh 是该词汇在具体语境下的中文自然解释。
+3. partOfSpeech 必须是"中文 (英文)"格式，如"名词 (noun)", "动词 (verb)"。
+4. imageLabel 是用于给AI绘画模型生成插图的英文提示词，必须是简短、具象的视觉描述（例如 "a calendar with events listed"）。
+5. usage 是对用法的详细说明，必须介绍该词语作为此词性时的搭配习惯、常见短语、适用场景和注意事项。绝对不要仅仅返回一个例句，必须是一段中文为主的说明性文字。
+6. 每个 item 包含: term, phonetic, partOfSpeech, definitionZh, scene, imageLabel, usage, culture, related, confusing, examples(包含 en 和 zh 的2个例句数组)。`,
         },
         {
           role: 'user',

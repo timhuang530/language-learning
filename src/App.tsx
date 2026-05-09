@@ -93,12 +93,12 @@ const vocabularySeed: VocabularyItem[] = [
     id: 'compromise',
     term: 'compromise',
     phonetic: '/ˈkɑːmprəmaɪz/',
-    partOfSpeech: 'n. / v.',
+    partOfSpeech: '名词/动词 (noun/verb)',
     definitionZh: '妥协，折中。双方各退一步，最后找到一个都能接受的中间方案。',
     scene: 'Work',
     imageLabel: 'Team discussion with two people meeting in the middle',
     usage:
-      '这个词在工作、会议和关系沟通里都很常见。它带有一种“不是最完美，但大家可以继续往前走”的感觉。',
+      '常见搭配：reach a compromise (达成妥协)，make a compromise (做出让步)。作为动词时可以接 on something。',
     culture:
       '在英语语境里，愿意 compromise 通常会让你显得成熟、合作，而不是没主见。',
     related: ['agreement', 'middle ground', 'negotiation'],
@@ -1682,32 +1682,43 @@ function App() {
                   </div>
 
                   <div className="detail-scroll">
-                    <div className="image-panel compact-panel">
-                      <div className="image-label">{selectedWord.scene}</div>
-                      <div className="image-placeholder compact-image">
-                        <div className="image-art">{selectedWord.imageLabel}</div>
+                    <div className="image-panel compact-panel" style={{ padding: '0', overflow: 'hidden', position: 'relative', display: 'block' }}>
+                      <div className="image-label" style={{ position: 'absolute', top: '12px', left: '12px', zIndex: 10, background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(8px)', color: 'var(--color-primary-600)', padding: '4px 10px', borderRadius: '999px', fontSize: '13px', fontWeight: '600' }}>
+                        {selectedWord.scene}
                       </div>
-                      <h2>{selectedWord.term}</h2>
-                      <p>
-                        {selectedWord.partOfSpeech} {selectedWord.phonetic}
-                      </p>
-                    </div>
-
-                    <div className="detail-body">
-                      <section className="content-card compact-card">
-                        <div className="content-heading">
-                          <h3>自然解释</h3>
+                      <div className="image-placeholder compact-image" style={{ width: '100%', height: '180px', borderRadius: '18px 18px 0 0', margin: 0, overflow: 'hidden', background: '#f8fafc' }}>
+                        <img 
+                          src={`https://image.pollinations.ai/prompt/${encodeURIComponent(selectedWord.imageLabel + ', vector flat illustration, simple minimal background, vibrant colors')}?nologo=1&width=600&height=360`} 
+                          alt={selectedWord.term} 
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                        />
+                      </div>
+                      <div style={{ padding: '16px 20px', width: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+                          <h2 style={{ margin: 0 }}>{selectedWord.term}</h2>
                           <button
                             type="button"
                             className={`icon-circle ${speakingText === selectedWord.term ? 'is-active' : ''}`}
                             onClick={() => speakText(selectedWord.term)}
                             aria-label="播放单词发音"
+                            style={{ width: '32px', height: '32px', background: 'var(--color-primary-100)', color: 'var(--color-primary-600)' }}
                           >
                             <Icon
                               name={speakingText === selectedWord.term ? 'pause' : 'volume'}
                               className="icon-sm"
                             />
                           </button>
+                        </div>
+                        <p style={{ margin: 0, color: 'var(--color-text-secondary)', fontSize: '15px' }}>
+                          {selectedWord.partOfSpeech} {selectedWord.phonetic}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="detail-body">
+                      <section className="content-card compact-card">
+                        <div className="content-heading">
+                          <h3>释义</h3>
                         </div>
                         <p>{selectedWord.definitionZh}</p>
                       </section>
