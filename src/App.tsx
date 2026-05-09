@@ -509,7 +509,10 @@ function App() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [assessmentQuestions, setAssessmentQuestions] = useState<AssessmentQuestion[]>([])
   const [assessmentAnswers, setAssessmentAnswers] = useState<{ questionId: string; type: string; isCorrect?: boolean; transcript?: string }[]>([])
-  const [assessmentResult, setAssessmentResult] = useState<AssessmentResult | null>(null)
+  const [assessmentResult, setAssessmentResult] = usePersistentState<AssessmentResult | null>(
+    'll.assessmentResult.v2',
+    null,
+  )
   const [isGeneratingAssessment, setIsGeneratingAssessment] = useState(false)
   const [isEvaluatingAssessment, setIsEvaluatingAssessment] = useState(false)
   const [activeTab, setActiveTab] = useState<MainTab>('vocabulary')
@@ -528,7 +531,7 @@ function App() {
   const [talkMode, setTalkMode] = useState<TalkMode>('Free Talk')
   const [historyTab, setHistoryTab] = useState<'Chats' | 'Searches'>('Chats')
   const [isAssessmentComplete, setIsAssessmentComplete] = usePersistentState(
-    'll.assessmentComplete',
+    'll.assessmentComplete.v2',
     false,
   )
   const [talkContext, setTalkContext] = useState('围绕你刚收藏或查过的词继续自然聊天')
@@ -609,15 +612,17 @@ function App() {
       setIsLoadingDailyWords(true)
       setIsLoadingReader(true)
 
+      const targetLevel = assessmentResult?.level || '适合母语 6-7 年级'
+
       try {
         const [daily, reader] = await Promise.all([
           fetchDailyVocabulary({
             scenes: ['Daily', 'Work', 'Meeting', 'Interview', 'Travel'],
-            level: '适合母语 6-7 年级',
+            level: targetLevel,
           }),
           fetchReaderFeed({
             scenes: ['Work', 'Travel', 'Meeting'],
-            level: '适合母语 6-7 年级',
+            level: targetLevel,
           }),
         ])
 
@@ -644,7 +649,7 @@ function App() {
     }
 
     void loadDynamicContent()
-  }, [setDailyWords, setReaderItems])
+  }, [setDailyWords, setReaderItems, assessmentResult?.level])
 
   useEffect(() => {
     liveTranscriptRef.current = liveTranscript
