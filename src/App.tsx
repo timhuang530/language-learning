@@ -551,7 +551,7 @@ function App() {
   const [dailyWords, setDailyWords] = usePersistentState<VocabularyItem[]>('ll.dailyWords', [])
   const [readerItems, setReaderItems] = usePersistentState<ReaderItem[]>('ll.readerItems', readerSeed)
   const [isSearchingWord, setIsSearchingWord] = useState(false)
-  const [isRelatedWordLoading, setIsRelatedWordLoading] = useState<string | null>(null)
+  const [pendingRelatedWord, setPendingRelatedWord] = useState<string | null>(null)
   const [isSendingTalk, setIsSendingTalk] = useState(false)
   const [isLoadingDailyWords, setIsLoadingDailyWords] = useState(false)
   const [isLoadingReader, setIsLoadingReader] = useState(false)
@@ -571,6 +571,7 @@ function App() {
   const recordingTimeoutRef = useRef<number | null>(null)
   const recognitionRestartTimerRef = useRef<number | null>(null)
   const stopRequestedRef = useRef(false)
+  const relatedWordRequestIdRef = useRef(0)
 
   useEffect(() => {
     return () => {
@@ -1403,6 +1404,38 @@ function App() {
     }
   }
 
+  const openRelatedWord = (term: string) => {
+    setSearchInput(term)
+    setSearchMode('direct')
+    setPendingRelatedWord(term)
+
+    const requestId = relatedWordRequestIdRef.current + 1
+    relatedWordRequestIdRef.current = requestId
+
+    void searchVocabulary({ query: term, mode: 'direct' })
+      .then((response) => {
+        if (relatedWordRequestIdRef.current !== requestId) {
+          return
+        }
+
+        const nextItem: VocabularyItem = {
+          ...response.item,
+          id: response.item.id ?? response.item.term.toLowerCase().replace(/\s+/g, '-'),
+        }
+
+        rememberSearch(term, 'direct', savedWords.includes(nextItem.id))
+        setSelectedWord(nextItem)
+        setPendingRelatedWord(null)
+      })
+      .catch(() => {
+        if (relatedWordRequestIdRef.current !== requestId) {
+          return
+        }
+
+        setPendingRelatedWord(null)
+      })
+  }
+
   const filteredVocabulary = useMemo(() => {
     const mergedVocabulary = [...dailyWords, ...vocabularySeed].filter(
       (item, index, list) => list.findIndex((candidate) => candidate.term === item.term) === index,
@@ -1453,6 +1486,7 @@ function App() {
   const isRootTabView =
     isAssessmentComplete && !selectedWord && !selectedArticle && !selectedLesson
   const recordingTimerLabel = `00:${String(Math.min(recordingSeconds, 60)).padStart(2, '0')} / 01:00`
+  const isWordLoadingScreen = Boolean(pendingRelatedWord)
   const isAiSpeakingInTalk = Boolean(
     activeTab === 'talk' &&
       speakingText &&
@@ -1702,166 +1736,210 @@ function App() {
         ) : (
           <>
             <main className="screen">
-              {selectedWord ? (
+              {selectedWord || pendingRelatedWord ? (
                 <section className="detail-screen">
                   <div className="detail-topbar">
                     <button
                       type="button"
                       className="icon-ghost"
-                      onClick={() => setSelectedWord(null)}
+                      onClick={() => {
+                        if (pendingRelatedWord) {
+                          relatedWordRequestIdRef.current += 1
+                          setPendingRelatedWord(null)
+                          return
+                        }
+
+                        setSelectedWord(null)
+                      }}
                       aria-label="返回"
                     >
                       <Icon name="chevron-left" className="icon-md" />
                     </button>
                     <span>Word</span>
-                    <button
-                      type="button"
-                      className="icon-ghost"
-                      onClick={() => toggleSaveWord(selectedWord.id)}
-                      aria-label={savedWords.includes(selectedWord.id) ? '取消收藏' : '收藏'}
-                    >
-                      <Icon
-                        name={savedWords.includes(selectedWord.id) ? 'bookmark-filled' : 'bookmark'}
-                        className="icon-md"
-                      />
-                    </button>
+                    {selectedWord && !pendingRelatedWord ? (
+                      <button
+                        type="button"
+                        className="icon-ghost"
+                        onClick={() => toggleSaveWord(selectedWord.id)}
+                        aria-label={savedWords.includes(selectedWord.id) ? '取消收藏' : '收藏'}
+                      >
+                        <Icon
+                          name={savedWords.includes(selectedWord.id) ? 'bookmark-filled' : 'bookmark'}
+                          className="icon-md"
+                        />
+                      </button>
+                    ) : (
+                      <span className="mini-text">Loading</span>
+                    )}
                   </div>
 
-                  <div className="detail-scroll">
-                    <div className="image-panel compact-panel" style={{ padding: '0', overflow: 'hidden', position: 'relative', display: 'block' }}>
-                      <div className="image-label" style={{ position: 'absolute', top: '12px', left: '12px', zIndex: 10, background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(8px)', color: 'var(--color-primary-600)', padding: '4px 10px', borderRadius: '999px', fontSize: '13px', fontWeight: '600' }}>
-                        {selectedWord.scene}
+                  {isWordLoadingScreen ? (
+                    <>
+                      <div className="detail-scroll detail-scroll--loading">
+                        <section className="word-loading-hero compact-panel">
+                          <div className="word-loading-hero__badge">Related Word</div>
+                          <div className="word-loading-hero__image" aria-hidden="true" />
+                          <div className="word-loading-hero__body">
+                            <div className="word-loading-hero__heading">
+                              <h2>{pendingRelatedWord}</h2>
+                              <span className="word-loading-hero__audio" aria-hidden="true" />
+                            </div>
+                            <div className="word-loading-hero__meta">
+                              <span className="word-loading-skeleton__line word-loading-skeleton__line--meta" />
+                            </div>
+                            <p>正在整理这个相关词的释义、例句和用法，马上为你展示完整词卡。</p>
+                            <div className="word-loading-panel__dots" aria-hidden="true">
+                              <span />
+                              <span />
+                              <span />
+                            </div>
+                          </div>
+                        </section>
+
+                        <section className="content-card compact-card word-loading-skeleton">
+                          <span className="word-loading-skeleton__line word-loading-skeleton__line--title" />
+                          <span className="word-loading-skeleton__line" />
+                          <span className="word-loading-skeleton__line" />
+                          <span className="word-loading-skeleton__line word-loading-skeleton__line--short" />
+                        </section>
+
+                        <section className="content-card compact-card word-loading-skeleton">
+                          <span className="word-loading-skeleton__line word-loading-skeleton__line--title" />
+                          <span className="word-loading-skeleton__line" />
+                          <span className="word-loading-skeleton__line word-loading-skeleton__line--short" />
+                          <div className="word-loading-chip-row" aria-hidden="true">
+                            <span className="word-loading-chip" />
+                            <span className="word-loading-chip word-loading-chip--wide" />
+                            <span className="word-loading-chip" />
+                          </div>
+                        </section>
                       </div>
-                      <div className="image-placeholder compact-image" style={{ width: '100%', height: '180px', borderRadius: '18px 18px 0 0', margin: 0, overflow: 'hidden', background: '#f8fafc' }}>
-                        <img 
-                          src={`https://image.pollinations.ai/prompt/${encodeURIComponent(selectedWord.imageLabel + ', vector flat illustration, simple minimal background, vibrant colors')}?nologo=1&width=600&height=360`} 
-                          alt={selectedWord.term} 
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                        />
+
+                      <div className="action-bar">
+                        <div className="word-loading-action word-loading-action--icon" aria-hidden="true" />
+                        <div className="word-loading-action word-loading-action--primary" aria-hidden="true" />
                       </div>
-                      <div style={{ padding: '16px 20px', width: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
-                          <h2 style={{ margin: 0 }}>{selectedWord.term}</h2>
-                          <button
-                            type="button"
-                            className={`icon-circle ${speakingText === selectedWord.term ? 'is-active' : ''}`}
-                            onClick={() => speakText(selectedWord.term)}
-                            aria-label="播放单词发音"
-                            style={{ width: '32px', height: '32px', background: 'var(--color-primary-100)', color: 'var(--color-primary-600)' }}
-                          >
-                            <Icon
-                              name={speakingText === selectedWord.term ? 'pause' : 'volume'}
-                              className="icon-sm"
+                    </>
+                  ) : selectedWord ? (
+                    <>
+                      <div className="detail-scroll">
+                        <div className="image-panel compact-panel" style={{ padding: '0', overflow: 'hidden', position: 'relative', display: 'block' }}>
+                          <div className="image-label" style={{ position: 'absolute', top: '12px', left: '12px', zIndex: 10, background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(8px)', color: 'var(--color-primary-600)', padding: '4px 10px', borderRadius: '999px', fontSize: '13px', fontWeight: '600' }}>
+                            {selectedWord.scene}
+                          </div>
+                          <div className="image-placeholder compact-image" style={{ width: '100%', height: '180px', borderRadius: '18px 18px 0 0', margin: 0, overflow: 'hidden', background: '#f8fafc' }}>
+                            <img
+                              src={`https://image.pollinations.ai/prompt/${encodeURIComponent(selectedWord.imageLabel + ', vector flat illustration, simple minimal background, vibrant colors')}?nologo=1&width=600&height=360`}
+                              alt={selectedWord.term}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             />
-                          </button>
-                        </div>
-                        <p style={{ margin: 0, color: 'var(--color-text-secondary)', fontSize: '15px' }}>
-                          {selectedWord.partOfSpeech} {selectedWord.phonetic}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="detail-body">
-                      <section className="content-card compact-card">
-                        <div className="content-heading">
-                          <h3>释义</h3>
-                        </div>
-                        <p>{selectedWord.definitionZh}</p>
-                      </section>
-
-                      <section className="content-card compact-card">
-                        <div className="content-heading">
-                          <h3>例句</h3>
-                          <span className="mini-text">2</span>
-                        </div>
-                        {Array.isArray(selectedWord.examples) && selectedWord.examples.map((example) => (
-                          <div key={example.en} className="example-card">
-                            <div className="example-row">
-                              <strong>{example.en}</strong>
+                          </div>
+                          <div style={{ padding: '16px 20px', width: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+                              <h2 style={{ margin: 0 }}>{selectedWord.term}</h2>
                               <button
                                 type="button"
-                                className={`icon-circle ${speakingText === example.en ? 'is-active' : ''}`}
-                                onClick={() => speakText(example.en)}
-                                aria-label="播放例句发音"
+                                className={`icon-circle ${speakingText === selectedWord.term ? 'is-active' : ''}`}
+                                onClick={() => speakText(selectedWord.term)}
+                                aria-label="播放单词发音"
+                                style={{ width: '32px', height: '32px', background: 'var(--color-primary-100)', color: 'var(--color-primary-600)' }}
                               >
                                 <Icon
-                                  name={speakingText === example.en ? 'pause' : 'play'}
+                                  name={speakingText === selectedWord.term ? 'pause' : 'volume'}
                                   className="icon-sm"
                                 />
                               </button>
                             </div>
-                            <p>{example.zh}</p>
+                            <p style={{ margin: 0, color: 'var(--color-text-secondary)', fontSize: '15px' }}>
+                              {selectedWord.partOfSpeech} {selectedWord.phonetic}
+                            </p>
                           </div>
-                        ))}
-                      </section>
-
-                      <section className="content-card compact-card">
-                        <h3>用法</h3>
-                        <p>{selectedWord.usage}</p>
-                        <p className="secondary-text">{selectedWord.culture}</p>
-                      </section>
-
-                      <section className="content-card compact-card">
-                        <h3>相关词</h3>
-                        <div className="chip-row">
-                          {Array.isArray(selectedWord.related) && selectedWord.related.map((item) => (
-                            <button
-                              key={item}
-                              type="button"
-                              className={`soft-chip ${isRelatedWordLoading === item ? 'is-loading' : ''}`}
-                              disabled={isRelatedWordLoading !== null}
-                              onClick={() => {
-                                setSearchInput(item)
-                                setSearchMode('direct')
-                                setIsRelatedWordLoading(item)
-                                searchVocabulary({ query: item, mode: 'direct' })
-                                  .then((response) => {
-                                    const newItem: VocabularyItem = {
-                                      ...response.item,
-                                      id: response.item.id ?? response.item.term.toLowerCase().replace(/\s+/g, '-'),
-                                    }
-                                    setSelectedWord(newItem)
-                                    rememberSearch(item, 'direct', savedWords.includes(newItem.id))
-                                  })
-                                  .catch(() => {})
-                                  .finally(() => setIsRelatedWordLoading(null))
-                              }}
-                              style={{ border: 'none', cursor: 'pointer', font: 'inherit', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                            >
-                              {isRelatedWordLoading === item && (
-                                <Icon name="sparkles" className="icon-sm pulse-anim" />
-                              )}
-                              {item}
-                            </button>
-                          ))}
                         </div>
-                        <p className="secondary-text">{selectedWord.confusing}</p>
-                      </section>
-                    </div>
-                  </div>
 
-                  <div className="action-bar">
-                    <button
-                      type="button"
-                      className="secondary-button"
-                      onClick={() => toggleSaveWord(selectedWord.id)}
-                    >
-                      <Icon
-                        name={savedWords.includes(selectedWord.id) ? 'bookmark-filled' : 'bookmark'}
-                        className="icon-sm"
-                      />
-                    </button>
-                    <button
-                      type="button"
-                      className="primary-button"
-                      onClick={() => {
-                        setSelectedWord(null)
-                        void initiateTalkWithAI('Free Talk', `围绕单词 ${selectedWord.term} 发起一段自然对话`)
-                      }}
-                    >
-                      Talk With This Word
-                    </button>
-                  </div>
+                        <div className="detail-body">
+                          <section className="content-card compact-card">
+                            <div className="content-heading">
+                              <h3>释义</h3>
+                            </div>
+                            <p>{selectedWord.definitionZh}</p>
+                          </section>
+
+                          <section className="content-card compact-card">
+                            <div className="content-heading">
+                              <h3>例句</h3>
+                              <span className="mini-text">2</span>
+                            </div>
+                            {Array.isArray(selectedWord.examples) && selectedWord.examples.map((example) => (
+                              <div key={example.en} className="example-card">
+                                <div className="example-row">
+                                  <strong>{example.en}</strong>
+                                  <button
+                                    type="button"
+                                    className={`icon-circle ${speakingText === example.en ? 'is-active' : ''}`}
+                                    onClick={() => speakText(example.en)}
+                                    aria-label="播放例句发音"
+                                  >
+                                    <Icon
+                                      name={speakingText === example.en ? 'pause' : 'play'}
+                                      className="icon-sm"
+                                    />
+                                  </button>
+                                </div>
+                                <p>{example.zh}</p>
+                              </div>
+                            ))}
+                          </section>
+
+                          <section className="content-card compact-card">
+                            <h3>用法</h3>
+                            <p>{selectedWord.usage}</p>
+                            <p className="secondary-text">{selectedWord.culture}</p>
+                          </section>
+
+                          <section className="content-card compact-card">
+                            <h3>相关词</h3>
+                            <div className="chip-row">
+                              {Array.isArray(selectedWord.related) && selectedWord.related.map((item) => (
+                                <button
+                                  key={item}
+                                  type="button"
+                                  className="soft-chip"
+                                  onClick={() => openRelatedWord(item)}
+                                  style={{ border: 'none', cursor: 'pointer', font: 'inherit' }}
+                                >
+                                  {item}
+                                </button>
+                              ))}
+                            </div>
+                            <p className="secondary-text">{selectedWord.confusing}</p>
+                          </section>
+                        </div>
+                      </div>
+
+                      <div className="action-bar">
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          onClick={() => toggleSaveWord(selectedWord.id)}
+                        >
+                          <Icon
+                            name={savedWords.includes(selectedWord.id) ? 'bookmark-filled' : 'bookmark'}
+                            className="icon-sm"
+                          />
+                        </button>
+                        <button
+                          type="button"
+                          className="primary-button"
+                          onClick={() => {
+                            setSelectedWord(null)
+                            void initiateTalkWithAI('Free Talk', `围绕单词 ${selectedWord.term} 发起一段自然对话`)
+                          }}
+                        >
+                          Talk With This Word
+                        </button>
+                      </div>
+                    </>
+                  ) : null}
                 </section>
               ) : selectedArticle ? (
                 <section className="detail-screen">
