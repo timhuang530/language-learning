@@ -32,6 +32,26 @@ type ReaderItem = {
   prompt: string
 }
 
+export type AssessmentQuestion = {
+  id: string
+  type: 'listening' | 'reading' | 'speaking'
+  content?: string
+  question?: string
+  prompt?: string
+  options?: string[]
+  answer?: string
+}
+
+export type AssessmentResult = {
+  level: string
+  summary: string
+  strengths: string
+  weaknesses: string
+  listeningScore: string
+  readingScore: string
+  speakingScore: string
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     headers: {
@@ -100,4 +120,39 @@ export async function fetchReaderFeed(input: {
     method: 'POST',
     body: JSON.stringify(input),
   })
+}
+
+export type AssessmentPlan = {
+  listening: number
+  reading: number
+  speaking: number
+}
+
+export async function fetchAssessmentPlan() {
+  return request<{ source: string; plan: AssessmentPlan; degraded?: boolean }>('/api/assessment/plan', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  })
+}
+
+export async function generateAssessment(input: { level: string; plan: AssessmentPlan }) {
+  return request<{ source: string; questions: AssessmentQuestion[]; degraded?: boolean }>(
+    '/api/assessment/generate',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  )
+}
+
+export async function evaluateAssessment(input: {
+  answers: { questionId: string; type: string; isCorrect?: boolean; transcript?: string }[]
+}) {
+  return request<{ source: string; result: AssessmentResult; degraded?: boolean }>(
+    '/api/assessment/evaluate',
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  )
 }

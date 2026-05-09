@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
-import { fetchDailyVocabulary, fetchReaderFeed, healthcheck, searchVocabulary, sendTalkMessage } from './lib/api'
+import { fetchDailyVocabulary, fetchReaderFeed, healthcheck, searchVocabulary, sendTalkMessage, generateAssessment, evaluateAssessment, fetchAssessmentPlan, type AssessmentQuestion, type AssessmentResult } from './lib/api'
 import { usePersistentState } from './lib/storage'
 
 type MainTab = 'vocabulary' | 'reader' | 'talk' | 'grammar' | 'history'
-type AssessmentStage = 'intro' | 'listening' | 'reading' | 'speaking' | 'result'
+type AssessmentStage = 'intro' | 'testing' | 'result'
 type SearchMode = 'direct' | 'describe'
 type TalkMode = 'Free Talk' | 'Work' | 'Meeting' | 'Interview' | 'Travel'
 
@@ -505,6 +505,13 @@ function Icon({
 
 function App() {
   const [assessmentStage, setAssessmentStage] = useState<AssessmentStage>('intro')
+  const [assessmentPlan, setAssessmentPlan] = useState<{ listening: number; reading: number; speaking: number } | null>(null)
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
+  const [assessmentQuestions, setAssessmentQuestions] = useState<AssessmentQuestion[]>([])
+  const [assessmentAnswers, setAssessmentAnswers] = useState<{ questionId: string; type: string; isCorrect?: boolean; transcript?: string }[]>([])
+  const [assessmentResult, setAssessmentResult] = useState<AssessmentResult | null>(null)
+  const [isGeneratingAssessment, setIsGeneratingAssessment] = useState(false)
+  const [isEvaluatingAssessment, setIsEvaluatingAssessment] = useState(false)
   const [activeTab, setActiveTab] = useState<MainTab>('vocabulary')
   const [searchMode, setSearchMode] = useState<SearchMode>('direct')
   const [searchInput, setSearchInput] = useState('')
@@ -588,6 +595,14 @@ function App() {
       .then((result) => setApiStatus(result.provider === 'deepseek' ? 'deepseek' : 'mock'))
       .catch(() => setApiStatus('mock'))
   }, [])
+
+  useEffect(() => {
+    if (!isAssessmentComplete || historyTab === 'Chats') {
+      fetchAssessmentPlan()
+        .then((res) => setAssessmentPlan(res.plan))
+        .catch(() => setAssessmentPlan({ listening: 1, reading: 1, speaking: 1 }))
+    }
+  }, [isAssessmentComplete, historyTab])
 
   useEffect(() => {
     const loadDynamicContent = async () => {
@@ -1257,6 +1272,61 @@ function App() {
     void startRecording()
   }
 
+  const startAssessment = async () => {
+    if (!assessmentPlan) return
+    setIsGeneratingAssessment(true)
+    try {
+      const response = await generateAssessment({ level: 'medium', plan: assessmentPlan })
+      if (response.questions.length > 0) {
+        setAssessmentQuestions(response.questions)
+        setAssessmentAnswers([])
+        setCurrentQuestionIndex(0)
+        setAssessmentStage('testing')
+      }
+    } catch {
+      // Fallback handled by API
+    } finally {
+      setIsGeneratingAssessment(false)
+    }
+  }
+
+  const handleAssessmentAnswer = (question: AssessmentQuestion, answerText?: string, isCorrect?: boolean) => {
+    if (typeof window !== 'undefined') {
+      window.speechSynthesis.cancel()
+      setSpeakingText(null)
+    }
+
+    const nextAnswers = [
+      ...assessmentAnswers,
+      {
+        questionId: question.id,
+        type: question.type,
+        isCorrect,
+        transcript: answerText,
+      },
+    ]
+    setAssessmentAnswers(nextAnswers)
+
+    if (currentQuestionIndex + 1 < assessmentQuestions.length) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1)
+    } else {
+      void submitAssessment(nextAnswers)
+    }
+  }
+
+  const submitAssessment = async (finalAnswers: typeof assessmentAnswers) => {
+    setAssessmentStage('result')
+    setIsEvaluatingAssessment(true)
+    try {
+      const response = await evaluateAssessment({ answers: finalAnswers })
+      setAssessmentResult(response.result)
+    } catch {
+      // Fallback handled by API
+    } finally {
+      setIsEvaluatingAssessment(false)
+    }
+  }
+
   const handleWordSearch = async () => {
     if (!searchInput.trim()) {
       return
@@ -1354,32 +1424,33 @@ function App() {
                 <div className="section-card">
                   <div className="mini-feature">
                     <strong>Listening</strong>
-                    <span>2 题</span>
+                    <span>{assessmentPlan ? assessmentPlan.listening : '-'} 题</span>
                   </div>
                   <div className="mini-feature">
                     <strong>Reading</strong>
-                    <span>2 题</span>
+                    <span>{assessmentPlan ? assessmentPlan.reading : '-'} 题</span>
                   </div>
                   <div className="mini-feature">
                     <strong>Speaking</strong>
-                    <span>2 题</span>
+                    <span>{assessmentPlan ? assessmentPlan.speaking : '-'} 题</span>
                   </div>
                 </div>
 
                 <button
                   className="primary-button"
                   type="button"
-                  onClick={() => setAssessmentStage('listening')}
+                  onClick={startAssessment}
+                  disabled={isGeneratingAssessment || !assessmentPlan}
                 >
-                  Start Assessment
+                  {isGeneratingAssessment ? 'Generating questions...' : 'Start Assessment'}
                 </button>
               </>
             )}
 
-            {assessmentStage === 'listening' && (
+            {assessmentStage === 'testing' && assessmentQuestions[currentQuestionIndex]?.type === 'listening' && (
               <>
                 <div className="panel-header">
-                  <span className="eyebrow">Step 1 / 3</span>
+                  <span className="eyebrow">Step {currentQuestionIndex + 1} / {assessmentQuestions.length}</span>
                   <h2>Listening</h2>
                   <p>听一段短音频，判断核心意图。</p>
                 </div>
@@ -1387,16 +1458,15 @@ function App() {
                 <div className="audio-card">
                   <button
                     type="button"
-                    className={`icon-square ${speakingText === 'The speaker is explaining a deadline compromise with the client.' ? 'is-active' : ''}`}
+                    className={`icon-square ${speakingText === assessmentQuestions[currentQuestionIndex].content ? 'is-active' : ''}`}
                     onClick={() =>
-                      speakText('The speaker is explaining a deadline compromise with the client.')
+                      speakText(assessmentQuestions[currentQuestionIndex].content ?? '')
                     }
                     aria-label="播放听力音频"
                   >
                     <Icon
                       name={
-                        speakingText ===
-                        'The speaker is explaining a deadline compromise with the client.'
+                        speakingText === assessmentQuestions[currentQuestionIndex].content
                           ? 'pause'
                           : 'play'
                       }
@@ -1404,23 +1474,22 @@ function App() {
                     />
                   </button>
                   <div>
-                    <strong>Office update</strong>
-                    <p>A short office voice note about a deadline.</p>
+                    <strong>{assessmentQuestions[currentQuestionIndex].question}</strong>
+                    <p>Listen carefully to answer the question.</p>
                   </div>
                 </div>
 
                 <div className="option-list">
-                  {[
-                    '他在抱怨客户太难沟通',
-                    '他在解释为什么项目需要延长时间',
-                    '他在拒绝参加会议',
-                    '他在介绍新的预算方案',
-                  ].map((option) => (
+                  {assessmentQuestions[currentQuestionIndex].options?.map((option) => (
                     <button
                       key={option}
                       className="option-button"
                       type="button"
-                      onClick={() => setAssessmentStage('reading')}
+                      onClick={() => handleAssessmentAnswer(
+                        assessmentQuestions[currentQuestionIndex],
+                        option,
+                        option === assessmentQuestions[currentQuestionIndex].answer
+                      )}
                     >
                       {option}
                     </button>
@@ -1429,33 +1498,33 @@ function App() {
               </>
             )}
 
-            {assessmentStage === 'reading' && (
+            {assessmentStage === 'testing' && assessmentQuestions[currentQuestionIndex]?.type === 'reading' && (
               <>
                 <div className="panel-header">
-                  <span className="eyebrow">Step 2 / 3</span>
+                  <span className="eyebrow">Step {currentQuestionIndex + 1} / {assessmentQuestions.length}</span>
                   <h2>Reading</h2>
                   <p>读一段短文，判断作者重点。</p>
                 </div>
 
                 <div className="reading-card">
-                  <p>
-                    Good meetings do not always end with perfect agreement. Sometimes the best outcome
-                    is a clear compromise, where everyone leaves knowing what to do next.
-                  </p>
+                  <p>{assessmentQuestions[currentQuestionIndex].content}</p>
+                </div>
+
+                <div className="reading-question" style={{ marginBottom: '12px' }}>
+                  <strong>{assessmentQuestions[currentQuestionIndex].question}</strong>
                 </div>
 
                 <div className="option-list">
-                  {[
-                    '好会议一定能让所有人完全同意',
-                    '会议最重要的是让大家说得更久',
-                    '折中但明确的行动结果往往比空谈更有价值',
-                    '会议应该避免任何不同意见',
-                  ].map((option) => (
+                  {assessmentQuestions[currentQuestionIndex].options?.map((option) => (
                     <button
                       key={option}
                       className="option-button"
                       type="button"
-                      onClick={() => setAssessmentStage('speaking')}
+                      onClick={() => handleAssessmentAnswer(
+                        assessmentQuestions[currentQuestionIndex],
+                        option,
+                        option === assessmentQuestions[currentQuestionIndex].answer
+                      )}
                     >
                       {option}
                     </button>
@@ -1464,63 +1533,118 @@ function App() {
               </>
             )}
 
-            {assessmentStage === 'speaking' && (
+            {assessmentStage === 'testing' && assessmentQuestions[currentQuestionIndex]?.type === 'speaking' && (
               <>
                 <div className="panel-header">
-                  <span className="eyebrow">Step 3 / 3</span>
+                  <span className="eyebrow">Step {currentQuestionIndex + 1} / {assessmentQuestions.length}</span>
                   <h2>Speaking</h2>
                   <p>请用英语简短回答。</p>
                 </div>
 
                 <div className="prompt-card">
                   <strong>Prompt</strong>
-                  <p>Tell me about a recent workday or school day, and mention one thing you wanted to improve.</p>
+                  <p>{assessmentQuestions[currentQuestionIndex].prompt}</p>
                 </div>
 
-                <button
-                  className="record-button"
-                  type="button"
-                  onClick={() => setAssessmentStage('result')}
-                >
-                  Tap To Record
-                </button>
-                <span className="record-hint">Demo 版本中点击后直接进入评估结果</span>
+                <div className="talk-actions" style={{ marginTop: 'auto', paddingBottom: '40px' }}>
+                  {isRecording && (
+                    <div className="recording-panel">
+                      <div className="recording-status">
+                        <span className="recording-status__left">
+                          <span className="recording-dot" />
+                          <span>Recording...</span>
+                        </span>
+                        <span>{recordingTimerLabel}</span>
+                      </div>
+                      <div className="recording-wave" aria-hidden="true">
+                        {Array.from({ length: 12 }).map((_, index) => (
+                          <span key={`record-wave-${index}`} style={{ animationDelay: `${index * 0.08}s` }} />
+                        ))}
+                      </div>
+                      <p>{liveTranscript || 'Listening...'}</p>
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    className={`record-button talk-record ${isRecording ? 'is-recording' : ''}`}
+                    onClick={() => {
+                      if (isRecording) {
+                        const finalTranscript = liveTranscriptRef.current.trim()
+                        clearRecordingTimers()
+                        stopBrowserRecognition()
+                        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+                          mediaRecorderRef.current.stop()
+                        }
+                        setIsRecording(false)
+                        setRecordingSeconds(0)
+                        handleAssessmentAnswer(assessmentQuestions[currentQuestionIndex], finalTranscript || 'User submitted audio without transcript')
+                        return
+                      }
+                      void startRecording()
+                    }}
+                  >
+                    <Icon name="mic" className="icon-sm" />{' '}
+                    {isRecording ? '完成录音并提交' : '开始回答'}
+                  </button>
+                </div>
               </>
             )}
 
             {assessmentStage === 'result' && (
               <>
-                <div className="hero-card result-card">
-                  <div className="hero-badge">Your current profile</div>
-                  <h1>你目前大致接近英语母语者 6-7 年级水平。</h1>
-                  <p>可以完成日常、旅游和基础工作交流。下一步重点练会议表达和面试叙事。</p>
-                </div>
+                {isEvaluatingAssessment || !assessmentResult ? (
+                  <div className="hero-card result-card">
+                    <div className="hero-badge">Evaluating</div>
+                    <h1>正在生成你的英语能力报告...</h1>
+                    <p>AI 考官正在分析你的听力、阅读和口语表现。</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="hero-card result-card">
+                      <div className="hero-badge">Your profile</div>
+                      <h1>{assessmentResult.level}</h1>
+                      <p>{assessmentResult.summary}</p>
+                    </div>
 
-                <div className="three-up">
-                  <div className="score-card">
-                    <strong>Listening</strong>
-                    <span>主旨稳定</span>
-                  </div>
-                  <div className="score-card">
-                    <strong>Reading</strong>
-                    <span>能读短文</span>
-                  </div>
-                  <div className="score-card">
-                    <strong>Speaking</strong>
-                    <span>适合弱纠错</span>
-                  </div>
-                </div>
+                    <div className="three-up">
+                      <div className="score-card">
+                        <strong>Listening</strong>
+                        <span>{assessmentResult.listeningScore}</span>
+                      </div>
+                      <div className="score-card">
+                        <strong>Reading</strong>
+                        <span>{assessmentResult.readingScore}</span>
+                      </div>
+                      <div className="score-card">
+                        <strong>Speaking</strong>
+                        <span>{assessmentResult.speakingScore}</span>
+                      </div>
+                    </div>
 
-                <button
-                  className="primary-button"
-                  type="button"
-                  onClick={() => {
-                    setIsAssessmentComplete(true)
-                    setActiveTab('vocabulary')
-                  }}
-                >
-                  Go To My Vocabulary
-                </button>
+                    <div className="section-card" style={{ textAlign: 'left', display: 'grid', gap: '12px' }}>
+                      <div>
+                        <strong style={{ color: '#047857' }}>👍 Strengths</strong>
+                        <p>{assessmentResult.strengths}</p>
+                      </div>
+                      <div style={{ height: '1px', background: '#e2e8f0' }} />
+                      <div>
+                        <strong style={{ color: '#b45309' }}>🎯 To Improve</strong>
+                        <p>{assessmentResult.weaknesses}</p>
+                      </div>
+                    </div>
+
+                    <button
+                      className="primary-button"
+                      type="button"
+                      onClick={() => {
+                        setIsAssessmentComplete(true)
+                        setActiveTab('vocabulary')
+                      }}
+                    >
+                      Go To My Vocabulary
+                    </button>
+                  </>
+                )}
               </>
             )}
           </main>
@@ -2171,6 +2295,21 @@ function App() {
 
                       {historyTab === 'Chats' ? (
                         <div className="list-stack">
+                          <button
+                            className="history-card"
+                            style={{ background: 'linear-gradient(135deg, #eef2ff 0%, #ffffff 100%)', borderColor: '#c7d2fe', cursor: 'pointer', textAlign: 'left' }}
+                            onClick={() => {
+                              setAssessmentStage('intro')
+                              setAssessmentQuestions([])
+                              setAssessmentAnswers([])
+                              setAssessmentResult(null)
+                              setIsAssessmentComplete(false)
+                            }}
+                          >
+                            <strong>重新进行英语能力测评</strong>
+                            <p>更新你的等级，并重新生成对应的生词与阅读内容。</p>
+                          </button>
+
                           {chatHistory.length === 0 ? (
                             <article className="history-card">
                               <strong>还没有新的聊天记录</strong>

@@ -363,6 +363,174 @@ app.post('/api/reader/feed', async (req, res) => {
   }
 })
 
+app.post('/api/assessment/plan', async (req, res) => {
+  if (!deepseekApiKey) {
+    return res.json({
+      source: 'mock',
+      plan: { listening: 2, reading: 2, speaking: 1 },
+    })
+  }
+
+  try {
+    const completion = await requestDeepSeek(
+      [
+        {
+          role: 'system',
+          content:
+            '你是一位专业的外语老师。请为新用户的初始英语能力测评设计题量。要求总耗时控制在 5 到 8 分钟左右，总题数在 5 到 8 题之间。请严格输出 JSON，包含 listening, reading, speaking 三个字段，值为整数，表示各自的题量。例如：{ "listening": 3, "reading": 2, "speaking": 2 }。',
+        },
+        {
+          role: 'user',
+          content: '请给出听力、阅读、口语的题量分配。',
+        },
+      ],
+      { type: 'json_object' },
+    )
+
+    const content = completion.choices?.[0]?.message?.content
+    const plan = JSON.parse(content)
+    res.json({
+      source: 'deepseek',
+      plan: {
+        listening: Number(plan.listening) || 2,
+        reading: Number(plan.reading) || 2,
+        speaking: Number(plan.speaking) || 1,
+      },
+    })
+  } catch (error) {
+    res.json({
+      source: 'mock',
+      degraded: true,
+      error: error instanceof Error ? error.message : 'unknown_error',
+      plan: { listening: 2, reading: 2, speaking: 1 },
+    })
+  }
+})
+
+app.post('/api/assessment/generate', async (req, res) => {
+  const { level = 'medium', plan = { listening: 1, reading: 1, speaking: 1 } } = req.body ?? {}
+
+  const fallbackQuestions = [
+    {
+      id: 'l1',
+      type: 'listening',
+      content: "Hey, I was wondering if you could help me with this project report. The deadline is tomorrow and I'm really behind.",
+      question: 'What does the speaker need help with?',
+      options: ['A project report', 'A marketing plan', 'A coffee order', 'A flight booking'],
+      answer: 'A project report',
+    },
+    {
+      id: 'r1',
+      type: 'reading',
+      content: 'Subject: Out of Office\n\nI will be out of the office starting Thursday, Oct 12th, returning Monday, Oct 16th. For urgent matters, please contact Sarah at sarah@company.com.',
+      question: 'Who should you contact for emergencies while the person is away?',
+      options: ['The sender', 'Sarah', 'No one', 'The HR department'],
+      answer: 'Sarah',
+    },
+    {
+      id: 's1',
+      type: 'speaking',
+      prompt: 'You are at a hotel front desk. You want to check in, but you arrived 2 hours early. What do you say to the receptionist?',
+    },
+  ]
+
+  if (!deepseekApiKey) {
+    return res.json({
+      source: 'mock',
+      questions: fallbackQuestions,
+    })
+  }
+
+  try {
+    const completion = await requestDeepSeek(
+      [
+        {
+          role: 'system',
+          content:
+            `你是英语学习测评系统的出题专家。请严格输出 JSON。顶层必须有 questions 字段（数组）。你需要生成 ${plan.listening + plan.reading + plan.speaking} 道题：${plan.listening} 道听力(listening)，${plan.reading} 道阅读(reading)，${plan.speaking} 道口语(speaking)。\n听力题(listening)：content 必须是一段生活场景或职场场景中的自然独白（如机场广播、电话留言、新闻播报、个人讲述等）。绝对不要包含 'Man:', 'Woman:', 'A:', 'B:' 等角色提示词，以免 TTS 机器朗读时读出这些标签，直接写出人物说的话即可。question 是基于内容的问题，options 是4个选项数组(全英文)，answer 是正确选项的文本。\n阅读题(reading)：content 是邮件/短文/通知(全英文)，question 是基于内容的问题，options 是4个选项数组(全英文)，answer 是正确选项的文本。\n口语题(speaking)：prompt 是一段情景设定的中文描述，要求用户用英文回答（例如：你在咖啡店点单...）。不需要 options 和 answer。\n题目难度要有梯度（包含简单、中等、困难），选项要具有迷惑性，以真实测试用户的水平。`,
+        },
+        {
+          role: 'user',
+          content: `请生成一套初始难度为 ${level} 的测评题，内容尽量贴近真实职场、旅游或日常生活。`,
+        },
+      ],
+      { type: 'json_object' },
+    )
+
+    const content = completion.choices?.[0]?.message?.content
+    const parsed = JSON.parse(content)
+    res.json({
+      source: 'deepseek',
+      questions: parsed.questions.map((q, i) => ({ ...q, id: `q${i}` })),
+    })
+  } catch (error) {
+    res.json({
+      source: 'mock',
+      degraded: true,
+      error: error instanceof Error ? error.message : 'unknown_error',
+      questions: fallbackQuestions,
+    })
+  }
+})
+
+app.post('/api/assessment/evaluate', async (req, res) => {
+  const { answers = [] } = req.body ?? {}
+
+  if (!deepseekApiKey) {
+    return res.json({
+      source: 'mock',
+      result: {
+        level: '适合母语 6-7 年级',
+        summary: '你的基础很扎实，听力和阅读能抓住核心信息，但在口语表达的流利度和词汇丰富度上还有提升空间。',
+        strengths: '信息提取能力强，基础语法正确',
+        weaknesses: '口语表达存在中式英语思维',
+        listeningScore: '80/100',
+        readingScore: '90/100',
+        speakingScore: '70/100',
+      },
+    })
+  }
+
+  try {
+    const completion = await requestDeepSeek(
+      [
+        {
+          role: 'system',
+          content:
+            '你是英语学习测评系统的评卷专家。请严格输出 JSON。顶层必须包含 level, summary, strengths, weaknesses, listeningScore, readingScore, speakingScore。\n评分规则：\n1. 客观题（listening, reading）：完全根据 `isCorrect` 字段判定，算出售分百分比（如全对为100/100，错一题扣相应分数）。\n2. 口语题（speaking）：必须严格评估 `transcript`。如果 transcript 为空、值为 "User submitted audio without transcript"、内容过短（如只有 hello）或与题目毫无关联，口语分数必须给 0/100！不能给及格分！根据词汇丰富度、语法正确性和切题程度严格打分。\n3. level 请用“适合母语 X 年级”这种格式。',
+        },
+        {
+          role: 'user',
+          content: `这是用户的作答记录：${JSON.stringify(answers)}。请生成真实客观的测评报告。`,
+        },
+      ],
+      { type: 'json_object' },
+    )
+
+    const content = completion.choices?.[0]?.message?.content
+    const parsed = JSON.parse(content)
+    res.json({
+      source: 'deepseek',
+      result: parsed,
+    })
+  } catch (error) {
+    res.json({
+      source: 'mock',
+      degraded: true,
+      error: error instanceof Error ? error.message : 'unknown_error',
+      result: {
+        level: '评估失败',
+        summary: '暂无法生成报告，请稍后再试。',
+        strengths: '-',
+        weaknesses: '-',
+        listeningScore: '-',
+        readingScore: '-',
+        speakingScore: '-',
+      },
+    })
+  }
+})
+
 app.post('/api/talk', async (req, res) => {
   const { mode = 'Free Talk', context = '', transcript = '', messages = [] } = req.body ?? {}
 
