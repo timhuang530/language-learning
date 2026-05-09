@@ -54,6 +54,8 @@ type ReaderSelection = {
   detail: string
 }
 
+type ImageStatus = 'loading' | 'loaded' | 'error'
+
 type ChatMessage = {
   id?: string
   side: 'ai' | 'user'
@@ -306,6 +308,31 @@ function createMessageId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`
 }
 
+function buildWordImageUrl(word: Pick<VocabularyItem, 'imageLabel'>) {
+  return `https://image.pollinations.ai/prompt/${encodeURIComponent(
+    `${word.imageLabel}, vector flat illustration, simple minimal background, vibrant colors`,
+  )}?nologo=1&width=600&height=360`
+}
+
+function extractRelatedWords(item: Pick<VocabularyItem, 'term' | 'related' | 'confusing'>) {
+  if (Array.isArray(item.related) && item.related.length > 0) {
+    return Array.from(
+      new Set(item.related.filter((entry) => typeof entry === 'string' && entry.trim())),
+    ).slice(0, 3)
+  }
+
+  const currentTerm = item.term.trim().toLowerCase()
+  const matches = item.confusing.match(/[A-Za-z][A-Za-z-]*/g) ?? []
+
+  return Array.from(
+    new Set(
+      matches
+        .map((entry: string) => entry.trim())
+        .filter((entry: string) => entry.length > 2 && entry.toLowerCase() !== currentTerm),
+    ),
+  ).slice(0, 3)
+}
+
 async function blobToDataUrl(blob: Blob) {
   return await new Promise<string>((resolve, reject) => {
     const reader = new FileReader()
@@ -555,6 +582,7 @@ function App() {
   const [isSendingTalk, setIsSendingTalk] = useState(false)
   const [isLoadingDailyWords, setIsLoadingDailyWords] = useState(false)
   const [isLoadingReader, setIsLoadingReader] = useState(false)
+  const [wordImageStatus, setWordImageStatus] = useState<Record<string, ImageStatus>>({})
   const [playingUserAudioId, setPlayingUserAudioId] = useState<string | null>(null)
   const [recordingNotice, setRecordingNotice] = useState<string | null>(null)
   const recognitionRef = useRef<BrowserSpeechRecognitionInstance | null>(null)
@@ -1436,12 +1464,53 @@ function App() {
       })
   }
 
-  const filteredVocabulary = useMemo(() => {
-    const mergedVocabulary = [...dailyWords, ...vocabularySeed].filter(
+  const allVocabulary = useMemo(() => {
+    return [...dailyWords, ...vocabularySeed].filter(
       (item, index, list) => list.findIndex((candidate) => candidate.term === item.term) === index,
     )
+  }, [dailyWords])
 
-    return mergedVocabulary.filter((item) => {
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    allVocabulary.forEach((item) => {
+      const imageUrl = buildWordImageUrl(item)
+      if (wordImageStatus[imageUrl]) {
+        return
+      }
+
+      setWordImageStatus((current) => {
+        if (current[imageUrl]) {
+          return current
+        }
+
+        return {
+          ...current,
+          [imageUrl]: 'loading',
+        }
+      })
+
+      const image = new window.Image()
+      image.onload = () => {
+        setWordImageStatus((current) => ({
+          ...current,
+          [imageUrl]: 'loaded',
+        }))
+      }
+      image.onerror = () => {
+        setWordImageStatus((current) => ({
+          ...current,
+          [imageUrl]: 'error',
+        }))
+      }
+      image.src = imageUrl
+    })
+  }, [allVocabulary, wordImageStatus])
+
+  const filteredVocabulary = useMemo(() => {
+    return allVocabulary.filter((item) => {
       const sceneMatch = selectedScene === 'All' || item.scene === selectedScene
       const keyword = searchInput.trim().toLowerCase()
 
@@ -1465,7 +1534,7 @@ function App() {
           item.examples.some((example) => example.zh.includes(searchInput)))
       )
     })
-  }, [searchInput, searchMode, selectedScene])
+  }, [allVocabulary, searchInput, searchMode, selectedScene])
 
   const filteredReaderItems = useMemo(() => {
     if (readerCategory === 'All') {
@@ -1487,6 +1556,8 @@ function App() {
     isAssessmentComplete && !selectedWord && !selectedArticle && !selectedLesson
   const recordingTimerLabel = `00:${String(Math.min(recordingSeconds, 60)).padStart(2, '0')} / 01:00`
   const isWordLoadingScreen = Boolean(pendingRelatedWord)
+  const selectedWordImageUrl = selectedWord ? buildWordImageUrl(selectedWord) : null
+  const selectedWordImageReady = selectedWordImageUrl ? wordImageStatus[selectedWordImageUrl] === 'loaded' : false
   const isAiSpeakingInTalk = Boolean(
     activeTab === 'talk' &&
       speakingText &&
@@ -1828,11 +1899,31 @@ function App() {
                             {selectedWord.scene}
                           </div>
                           <div className="image-placeholder compact-image" style={{ width: '100%', height: '180px', borderRadius: '18px 18px 0 0', margin: 0, overflow: 'hidden', background: '#f8fafc' }}>
-                            <img
-                              src={`https://image.pollinations.ai/prompt/${encodeURIComponent(selectedWord.imageLabel + ', vector flat illustration, simple minimal background, vibrant colors')}?nologo=1&width=600&height=360`}
-                              alt={selectedWord.term}
-                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            />
+                            {!selectedWordImageReady && (
+                              <div className="word-image-loading">
+                                <div className="word-image-loading__badge">Illustration</div>
+                                <div className="word-image-loading__art" aria-hidden="true" />
+                              </div>
+                            )}
+                            {selectedWordImageUrl && (
+                              <img
+                                src={selectedWordImageUrl}
+                                alt={selectedWord.term}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: selectedWordImageReady ? 1 : 0, transition: 'opacity 0.24s ease' }}
+                                onLoad={() =>
+                                  setWordImageStatus((current) => ({
+                                    ...current,
+                                    [selectedWordImageUrl]: 'loaded',
+                                  }))
+                                }
+                                onError={() =>
+                                  setWordImageStatus((current) => ({
+                                    ...current,
+                                    [selectedWordImageUrl]: 'error',
+                                  }))
+                                }
+                              />
+                            )}
                           </div>
                           <div style={{ padding: '16px 20px', width: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
@@ -1899,7 +1990,7 @@ function App() {
                           <section className="content-card compact-card">
                             <h3>相关词</h3>
                             <div className="chip-row">
-                              {Array.isArray(selectedWord.related) && selectedWord.related.map((item) => (
+                              {extractRelatedWords(selectedWord).map((item) => (
                                 <button
                                   key={item}
                                   type="button"

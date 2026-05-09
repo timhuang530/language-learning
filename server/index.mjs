@@ -179,6 +179,70 @@ function buildReaderFallback() {
   return fallbackReaderItems
 }
 
+function normalizeExamples(examples = []) {
+  if (!Array.isArray(examples) || examples.length === 0) {
+    return [
+      { en: 'This word appears in a natural English sentence.', zh: '这个词已经放进了一个自然的英语句子里。' },
+      { en: 'Try using it again in your own context.', zh: '你也可以把它换到自己的场景里再练一次。' },
+    ]
+  }
+
+  return examples
+    .filter((item) => item && typeof item.en === 'string' && typeof item.zh === 'string')
+    .slice(0, 2)
+}
+
+function extractRelatedTerms(text = '', term = '') {
+  if (typeof text !== 'string') {
+    return []
+  }
+
+  const current = term.trim().toLowerCase()
+  const matches = text.match(/[A-Za-z][A-Za-z-]*/g) ?? []
+
+  return Array.from(
+    new Set(
+      matches
+        .map((item) => item.trim())
+        .filter((item) => item.length > 2 && item.toLowerCase() !== current),
+    ),
+  ).slice(0, 3)
+}
+
+function normalizeVocabularyItem(rawItem = {}, fallbackTerm = 'word') {
+  const safeTerm =
+    typeof rawItem.term === 'string' && rawItem.term.trim() ? rawItem.term.trim() : fallbackTerm
+  const relatedFromPayload = Array.isArray(rawItem.related)
+    ? rawItem.related.filter((item) => typeof item === 'string' && item.trim())
+    : []
+  const related = relatedFromPayload.length > 0
+    ? Array.from(new Set(relatedFromPayload)).slice(0, 3)
+    : extractRelatedTerms(rawItem.confusing, safeTerm)
+
+  return {
+    ...rawItem,
+    term: safeTerm,
+    phonetic: typeof rawItem.phonetic === 'string' ? rawItem.phonetic : '',
+    partOfSpeech: typeof rawItem.partOfSpeech === 'string' && rawItem.partOfSpeech.trim()
+      ? rawItem.partOfSpeech
+      : '词性 (part of speech)',
+    definitionZh: typeof rawItem.definitionZh === 'string' && rawItem.definitionZh.trim()
+      ? rawItem.definitionZh
+      : '暂未生成释义。',
+    scene: typeof rawItem.scene === 'string' && rawItem.scene.trim() ? rawItem.scene : 'Daily',
+    imageLabel: typeof rawItem.imageLabel === 'string' && rawItem.imageLabel.trim()
+      ? rawItem.imageLabel
+      : `${safeTerm}, simple flat illustration`,
+    usage: typeof rawItem.usage === 'string' && rawItem.usage.trim()
+      ? rawItem.usage
+      : '正在补充这个词的常见搭配和使用场景。',
+    culture: typeof rawItem.culture === 'string' ? rawItem.culture : '',
+    related,
+    confusing: typeof rawItem.confusing === 'string' ? rawItem.confusing : '',
+    examples: normalizeExamples(rawItem.examples),
+  }
+}
+
 async function requestDeepSeek(messages, responseFormat) {
   const keyStatus = getKeyStatus()
 
@@ -291,12 +355,12 @@ app.post('/api/vocabulary/search', async (req, res) => {
 
     const content = completion.choices?.[0]?.message?.content
     const parsed = JSON.parse(content)
-    res.json({ source: 'deepseek', item: parsed })
+    res.json({ source: 'deepseek', item: normalizeVocabularyItem(parsed, query.trim()) })
   } catch (error) {
     res.json({
       source: 'mock',
       degraded: true,
-      item: buildDictionaryFallback(query, mode),
+      item: normalizeVocabularyItem(buildDictionaryFallback(query, mode), query.trim()),
       error: error instanceof Error ? error.message : 'unknown_error',
     })
   }
@@ -338,13 +402,17 @@ app.post('/api/vocabulary/daily', async (req, res) => {
     const parsed = JSON.parse(content)
     res.json({
       source: 'deepseek',
-      items: parsed.items,
+      items: Array.isArray(parsed.items)
+        ? parsed.items.map((item, index) =>
+            normalizeVocabularyItem(item, `word-${index + 1}`),
+          )
+        : buildDailyWordsFallback(scenes),
     })
   } catch (error) {
     res.json({
       source: 'mock',
       degraded: true,
-      items: buildDailyWordsFallback(scenes),
+      items: buildDailyWordsFallback(scenes).map((item) => normalizeVocabularyItem(item, item.term)),
       error: error instanceof Error ? error.message : 'unknown_error',
     })
   }
@@ -392,7 +460,7 @@ app.post('/api/reader/feed', async (req, res) => {
   }
 })
 
-app.post('/api/assessment/plan', async (req, res) => {
+app.post('/api/assessment/plan', async (_req, res) => {
   if (!deepseekApiKey) {
     return res.json({
       source: 'mock',
