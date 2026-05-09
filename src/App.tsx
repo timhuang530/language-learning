@@ -3,10 +3,11 @@ import './App.css'
 import { fetchDailyVocabulary, fetchReaderFeed, searchVocabulary, sendTalkMessage, generateAssessment, evaluateAssessment, fetchAssessmentPlan, type AssessmentQuestion, type AssessmentResult } from './lib/api'
 import { usePersistentState } from './lib/storage'
 
-type MainTab = 'vocabulary' | 'reader' | 'talk' | 'grammar' | 'history'
+type MainTab = 'vocabulary' | 'reader' | 'talk' | 'history'
 type AssessmentStage = 'intro' | 'testing' | 'result'
 type SearchMode = 'direct' | 'describe'
 type TalkMode = 'Free Talk' | 'Work' | 'Meeting' | 'Interview' | 'Travel'
+type ReaderCategory = 'All' | 'Speech' | 'Travel' | 'News'
 
 type VocabularyItem = {
   id: string
@@ -37,15 +38,7 @@ type ReaderItem = {
   sentence: string
   sentenceZh: string
   prompt: string
-}
-
-type Lesson = {
-  id: string
-  scene: TalkMode | 'Daily'
-  title: string
-  goal: string
-  points: string[]
-  patterns: string[]
+  updatedAt?: string
 }
 
 type ReaderSelection = {
@@ -226,19 +219,34 @@ const vocabularySeed: VocabularyItem[] = [
 
 const readerSeed: ReaderItem[] = [
   {
-    id: 'speech-habits',
-    title: 'How Small Habits Shape Better Workdays',
+    id: 'speech-routine',
+    title: 'A Short Speech on Better Work Routines',
     source: 'Speech digest',
     level: '适合母语 7-8 年级',
     minutes: '4 min',
-    tag: 'Work',
-    summary: '一篇轻量职场读物，讲日常小习惯如何影响专注力和沟通效率。',
+    tag: 'Speech',
+    summary: '一篇演讲风格短文，讲小习惯如何影响专注力和工作节奏。',
     articleBody: "In today's fast-paced corporate world, many professionals feel overwhelmed by endless meetings and constant notifications. However, recent studies suggest that a steady routine can lower stress and make hard tasks feel smaller. It's not about working longer hours, but rather creating small, predictable habits. For example, taking a five-minute walk before diving into a complex report, or setting strict 'no-email' boundaries during lunch. These micro-habits help the brain transition between different modes of thinking. People who keep a clear routine often make faster decisions and feel less exhausted by the end of the day. Ultimately, success isn't always about massive leaps; it's often the result of tiny, consistent steps.",
     keyWord: 'routine',
     keyWordMeaning: '固定做事节奏，日常习惯流程',
     sentence: 'A steady routine can lower stress and make hard tasks feel smaller.',
     sentenceZh: '稳定的日常节奏可以降低压力，也会让难任务看起来没那么吓人。',
     prompt: '和我聊聊你自己的工作习惯，以及你最想调整的一件事。',
+  },
+  {
+    id: 'speech-confidence',
+    title: 'Why Speaking Slowly Can Sound More Confident',
+    source: 'Public speaking note',
+    level: '适合母语 7-8 年级',
+    minutes: '3 min',
+    tag: 'Speech',
+    summary: '一篇关于表达节奏的短文，适合练语音、语调和说话逻辑。',
+    articleBody: 'Many learners think speaking fast sounds fluent, but experienced presenters often do the opposite. They slow down on key points, pause before important ideas, and give listeners time to process the message. A slower pace can make your speech sound more confident and organized. It also helps you choose words more carefully and reduce unnecessary mistakes. In meetings or interviews, this simple change often improves how people respond to you. Confidence is not only about vocabulary. It is also about rhythm, clarity, and control.',
+    keyWord: 'pace',
+    keyWordMeaning: '节奏，速度，尤其指说话或做事时的快慢',
+    sentence: 'A slower pace can make your speech sound more confident and organized.',
+    sentenceZh: '更慢一点的节奏会让你的表达听起来更自信、更有条理。',
+    prompt: '和我聊聊你说英语时最想改善的表达问题。',
   },
   {
     id: 'travel-city',
@@ -255,34 +263,55 @@ const readerSeed: ReaderItem[] = [
     sentenceZh: '我们在安静的街道上闲逛，直到整座城市慢慢醒来。',
     prompt: '用比较轻松的方式和我聊一聊你最喜欢的旅行城市。',
   },
+  {
+    id: 'travel-delay',
+    title: 'When a Flight Delay Changes the Whole Plan',
+    source: 'Travel update',
+    level: '适合母语 6-7 年级',
+    minutes: '4 min',
+    tag: 'Travel',
+    summary: '一篇旅行场景短文，适合练延误、改签和行程变动相关表达。',
+    articleBody: 'A short delay can affect much more than one flight. Travelers may miss hotel check-in times, train connections, or planned activities in the next city. That is why experienced travelers leave extra room in their schedule when a trip involves multiple steps. A flexible itinerary does not remove every problem, but it can reduce stress when plans suddenly change. Even a simple habit, like checking gate updates early, can make a difficult travel day easier to manage.',
+    keyWord: 'flexible',
+    keyWordMeaning: '灵活的，可调整的',
+    sentence: 'A flexible itinerary does not remove every problem, but it can reduce stress.',
+    sentenceZh: '灵活的行程安排不能解决所有问题，但可以减少压力。',
+    prompt: '聊聊你旅行时最怕遇到什么突发状况，以及你会怎么处理。',
+  },
+  {
+    id: 'news-city',
+    title: 'City Libraries Add Quiet Pods for Remote Workers',
+    source: 'Local News',
+    level: '适合母语 7-8 年级',
+    minutes: '4 min',
+    tag: 'News',
+    summary: '一篇偏新闻风格的城市生活报道，讨论公共空间如何支持远程办公。',
+    articleBody: 'Several city libraries have started introducing quiet work pods for remote workers and students. The new spaces include stronger internet connections, better lighting, and sound-reducing walls. Library managers say the change responds to a growing demand for affordable places to focus outside the home. For many people, coffee shops are too noisy and shared offices are too expensive. The project has been welcomed by freelancers, students, and job seekers who need a calm environment for serious work. Officials say more locations may receive the same upgrade later this year.',
+    keyWord: 'affordable',
+    keyWordMeaning: '负担得起的，价格合理的',
+    sentence: 'The change responds to a growing demand for affordable places to focus outside the home.',
+    sentenceZh: '这一变化回应了人们对“家外可专注且价格合理空间”的不断增长的需求。',
+    prompt: '和我聊聊你理想中的学习或工作环境是什么样的。',
+  },
+  {
+    id: 'news-tech',
+    title: 'Small AI Tools Are Changing Daily Office Tasks',
+    source: 'Tech News',
+    level: '适合母语 7-8 年级',
+    minutes: '5 min',
+    tag: 'News',
+    summary: '一篇科技新闻风格短文，讨论 AI 工具如何改变普通办公流程。',
+    articleBody: 'Instead of replacing entire jobs at once, many small AI tools are quietly changing everyday office work. Employees now use them to summarize meetings, rewrite emails, organize notes, and prepare first drafts. Managers say the biggest impact is not dramatic automation, but faster completion of repetitive tasks. At the same time, companies are learning that human review still matters. A tool may save time, but people must still check tone, accuracy, and business context before sending anything important. For many teams, the new question is no longer whether to use these tools, but how to use them wisely.',
+    keyWord: 'draft',
+    keyWordMeaning: '草稿，初稿',
+    sentence: 'Managers say the biggest impact is not dramatic automation, but faster completion of repetitive tasks.',
+    sentenceZh: '管理者表示，最大的影响不是戏剧性的自动化，而是重复任务完成得更快了。',
+    prompt: '和我聊聊你是否愿意在学习或工作中使用 AI 工具，以及原因。',
+  },
 ]
 
-const lessons: Lesson[] = [
-  {
-    id: 'work-opinion',
-    scene: 'Work',
-    title: '工作场景里表达建议',
-    goal: '在不太生硬的情况下提出建议或替代方案。',
-    points: ['使用 could / might soften your tone', '用 because 补充理由', '避免命令式表达'],
-    patterns: ['Maybe we could try...', 'I think it might help if...', 'One possible option is...'],
-  },
-  {
-    id: 'meeting-actions',
-    scene: 'Meeting',
-    title: '会议里确认下一步',
-    goal: '把模糊讨论变成明确行动项。',
-    points: ['用 will 表达承诺', '用 by + 时间说明截止点', '重复确认避免误解'],
-    patterns: ['So the next step is...', 'I will follow up by...', 'Just to confirm, we are going to...'],
-  },
-  {
-    id: 'interview-story',
-    scene: 'Interview',
-    title: '面试里讲过去经历',
-    goal: '更自然地描述经历、动作和结果。',
-    points: ['过去时要稳定', '按背景-动作-结果来讲', '适当加入数据或影响'],
-    patterns: ['I was responsible for...', 'One challenge I faced was...', 'In the end, we were able to...'],
-  },
-]
+const readerTabs: ReaderCategory[] = ['All', 'Speech', 'Travel', 'News']
+const readerContentTabs: Exclude<ReaderCategory, 'All'>[] = ['Speech', 'Travel', 'News']
 
 const emptyChatMessagesByMode: ChatMessagesByMode = {
   'Free Talk': [],
@@ -331,6 +360,40 @@ function extractRelatedWords(item: Pick<VocabularyItem, 'term' | 'related' | 'co
         .filter((entry: string) => entry.length > 2 && entry.toLowerCase() !== currentTerm),
     ),
   ).slice(0, 3)
+}
+
+function buildReaderUpdatedAtLabel(date = new Date()) {
+  return `更新于 ${date.toLocaleString('zh-CN', {
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })}`
+}
+
+function ensureReaderCoverage(items: ReaderItem[], fallbackDateLabel: string) {
+  const normalized = items.map((item, index) => ({
+    ...item,
+    tag: readerContentTabs.includes(item.tag as Exclude<ReaderCategory, 'All'>)
+      ? item.tag
+      : readerContentTabs[index % readerContentTabs.length],
+    updatedAt: item.updatedAt || fallbackDateLabel,
+  }))
+
+  const existingTags = new Set(normalized.map((item) => item.tag))
+  const missingTags = readerContentTabs.filter((tag) => !existingTags.has(tag))
+
+  const supplements = missingTags.map((tag) => {
+    const fallback = readerSeed.find((item) => item.tag === tag) ?? readerSeed[0]
+    return {
+      ...fallback,
+      id: `${fallback.id}-${tag.toLowerCase()}-fallback`,
+      tag,
+      updatedAt: fallbackDateLabel,
+    }
+  })
+
+  return [...normalized, ...supplements]
 }
 
 async function blobToDataUrl(blob: Blob) {
@@ -555,9 +618,8 @@ function App() {
     'itinerary',
   ])
   const [selectedArticle, setSelectedArticle] = useState<ReaderItem | null>(null)
-  const [readerCategory, setReaderCategory] = useState('All')
+  const [readerCategory, setReaderCategory] = useState<ReaderCategory>('All')
   const [readerSelection, setReaderSelection] = useState<ReaderSelection | null>(null)
-  const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null)
   const [talkMode, setTalkMode] = useState<TalkMode>('Free Talk')
   const [historyTab, setHistoryTab] = useState<'Chats' | 'Searches'>('Chats')
   const [isAssessmentComplete, setIsAssessmentComplete] = usePersistentState(
@@ -577,6 +639,10 @@ function App() {
   const [searchHistory, setSearchHistory] = usePersistentState<SearchHistoryItem[]>('ll.searchHistory', [])
   const [dailyWords, setDailyWords] = usePersistentState<VocabularyItem[]>('ll.dailyWords', [])
   const [readerItems, setReaderItems] = usePersistentState<ReaderItem[]>('ll.readerItems', readerSeed)
+  const [readerLastUpdatedAt, setReaderLastUpdatedAt] = usePersistentState(
+    'll.readerLastUpdatedAt',
+    buildReaderUpdatedAtLabel(),
+  )
   const [isSearchingWord, setIsSearchingWord] = useState(false)
   const [pendingRelatedWord, setPendingRelatedWord] = useState<string | null>(null)
   const [isSendingTalk, setIsSendingTalk] = useState(false)
@@ -647,7 +713,7 @@ function App() {
             level: targetLevel,
           }),
           fetchReaderFeed({
-            scenes: ['Work', 'Travel', 'Meeting'],
+            scenes: ['Speech', 'Travel', 'News'],
             level: targetLevel,
           }),
         ])
@@ -673,12 +739,19 @@ function App() {
           ? reader.items
           : readerSeed
 
+        const updatedAtLabel = buildReaderUpdatedAtLabel()
+
         setReaderItems(
-          fetchedReader.map((item, index) => ({
-            ...item,
-            id: item.id || `reader-${index}`,
-          })),
+          ensureReaderCoverage(
+            fetchedReader.map((item, index) => ({
+              ...item,
+              id: item.id || `reader-${index}`,
+              updatedAt: updatedAtLabel,
+            })),
+            updatedAtLabel,
+          ),
         )
+        setReaderLastUpdatedAt(updatedAtLabel)
       } catch {
         const fallbackDaily = vocabularySeed.slice(0, 5)
         setDailyWords(fallbackDaily)
@@ -686,15 +759,24 @@ function App() {
           const newIds = fallbackDaily.map((w) => w.id)
           return Array.from(new Set([...current, ...newIds]))
         })
-        setReaderItems(readerSeed)
+        const fallbackUpdatedAtLabel = buildReaderUpdatedAtLabel()
+        setReaderItems(ensureReaderCoverage(readerSeed, fallbackUpdatedAtLabel))
+        setReaderLastUpdatedAt(fallbackUpdatedAtLabel)
       } finally {
         setIsLoadingDailyWords(false)
         setIsLoadingReader(false)
       }
     }
 
+    const todayKey = new Date().toLocaleDateString('zh-CN')
+
+    if (readerLastUpdatedAt.includes(todayKey) && dailyWords.length > 0 && readerItems.length > 0) {
+      setReaderItems((current) => ensureReaderCoverage(current, readerLastUpdatedAt))
+      return
+    }
+
     void loadDynamicContent()
-  }, [setDailyWords, setReaderItems, assessmentResult?.level])
+  }, [setDailyWords, setReaderItems, assessmentResult?.level, readerLastUpdatedAt, dailyWords.length, readerItems.length])
 
   useEffect(() => {
     liveTranscriptRef.current = liveTranscript
@@ -1541,8 +1623,8 @@ function App() {
       return readerItems
     }
 
-    return readerItems.filter((item) => item.source.toLowerCase().includes(readerCategory.toLowerCase()))
-  }, [readerCategory])
+    return readerItems.filter((item) => item.tag === readerCategory)
+  }, [readerCategory, readerItems])
 
   const todayAddedWordCount = useMemo(() => {
     return new Set([
@@ -1553,7 +1635,7 @@ function App() {
   }, [dailyWords, savedWords])
 
   const isRootTabView =
-    isAssessmentComplete && !selectedWord && !selectedArticle && !selectedLesson
+    isAssessmentComplete && !selectedWord && !selectedArticle
   const recordingTimerLabel = `00:${String(Math.min(recordingSeconds, 60)).padStart(2, '0')} / 01:00`
   const isWordLoadingScreen = Boolean(pendingRelatedWord)
   const selectedWordImageUrl = selectedWord ? buildWordImageUrl(selectedWord) : null
@@ -1840,34 +1922,40 @@ function App() {
                         />
                       </button>
                     ) : (
-                      <span className="mini-text">Loading</span>
+                      <span className="detail-topbar__slot" aria-hidden="true" />
                     )}
                   </div>
 
                   {isWordLoadingScreen ? (
                     <>
                       <div className="detail-scroll detail-scroll--loading">
-                        <section className="word-loading-hero compact-panel">
-                          <div className="word-loading-hero__badge">Related Word</div>
-                          <div className="word-loading-hero__image" aria-hidden="true" />
-                          <div className="word-loading-hero__body">
-                            <div className="word-loading-hero__heading">
-                              <h2>{pendingRelatedWord}</h2>
-                              <span className="word-loading-hero__audio" aria-hidden="true" />
+                        <div className="image-panel compact-panel word-card-loading-panel" style={{ padding: '0', overflow: 'hidden', position: 'relative', display: 'block' }}>
+                          <div className="image-label word-card-loading-panel__scene" aria-hidden="true">
+                            <span className="word-loading-skeleton__line word-loading-skeleton__line--chip" />
+                          </div>
+                          <div className="image-placeholder compact-image" style={{ width: '100%', height: '180px', borderRadius: '18px 18px 0 0', margin: 0, overflow: 'hidden', background: '#f8fafc' }}>
+                            <div className="word-image-loading" aria-hidden="true">
+                              <div className="word-image-loading__art" />
                             </div>
-                            <div className="word-loading-hero__meta">
+                          </div>
+                          <div className="word-card-loading-panel__body">
+                            <div className="word-card-loading-panel__heading">
+                              <h2>{pendingRelatedWord}</h2>
+                              <span className="word-card-loading-panel__audio" aria-hidden="true" />
+                            </div>
+                            <div className="word-card-loading-panel__meta">
                               <span className="word-loading-skeleton__line word-loading-skeleton__line--meta" />
                             </div>
-                            <p>正在整理这个相关词的释义、例句和用法，马上为你展示完整词卡。</p>
                             <div className="word-loading-panel__dots" aria-hidden="true">
                               <span />
                               <span />
                               <span />
                             </div>
                           </div>
-                        </section>
+                        </div>
 
                         <section className="content-card compact-card word-loading-skeleton">
+                          <h3>释义</h3>
                           <span className="word-loading-skeleton__line word-loading-skeleton__line--title" />
                           <span className="word-loading-skeleton__line" />
                           <span className="word-loading-skeleton__line" />
@@ -1875,9 +1963,23 @@ function App() {
                         </section>
 
                         <section className="content-card compact-card word-loading-skeleton">
+                          <div className="content-heading">
+                            <h3>例句</h3>
+                            <span className="mini-text">2</span>
+                          </div>
                           <span className="word-loading-skeleton__line word-loading-skeleton__line--title" />
                           <span className="word-loading-skeleton__line" />
+                          <span className="word-loading-skeleton__line" />
+                        </section>
+
+                        <section className="content-card compact-card word-loading-skeleton">
+                          <h3>用法</h3>
                           <span className="word-loading-skeleton__line word-loading-skeleton__line--short" />
+                          <span className="word-loading-skeleton__line" />
+                        </section>
+
+                        <section className="content-card compact-card word-loading-skeleton">
+                          <h3>相关词</h3>
                           <div className="word-loading-chip-row" aria-hidden="true">
                             <span className="word-loading-chip" />
                             <span className="word-loading-chip word-loading-chip--wide" />
@@ -2164,66 +2266,6 @@ function App() {
                     </button>
                   </div>
                 </section>
-              ) : selectedLesson ? (
-                <section className="detail-screen">
-                  <div className="detail-topbar">
-                    <button
-                      type="button"
-                      className="icon-ghost"
-                      onClick={() => setSelectedLesson(null)}
-                      aria-label="返回"
-                    >
-                      <Icon name="chevron-left" className="icon-md" />
-                    </button>
-                    <span>Grammar</span>
-                    <button type="button" className="icon-ghost" aria-label="课程场景">
-                      {selectedLesson.scene}
-                    </button>
-                  </div>
-
-                  <div className="detail-scroll">
-                    <div className="detail-body lesson-body">
-                      <div className="hero-card compact">
-                        <div className="hero-badge">{selectedLesson.scene}</div>
-                        <h2>{selectedLesson.title}</h2>
-                        <p>{selectedLesson.goal}</p>
-                      </div>
-
-                      <section className="content-card compact-card">
-                        <h3>关键点</h3>
-                        <ul className="bullet-list">
-                          {selectedLesson.points.map((point) => (
-                            <li key={point}>{point}</li>
-                          ))}
-                        </ul>
-                      </section>
-
-                      <section className="content-card compact-card">
-                        <h3>句型</h3>
-                        <ul className="bullet-list">
-                          {selectedLesson.patterns.map((pattern) => (
-                            <li key={pattern}>{pattern}</li>
-                          ))}
-                        </ul>
-                      </section>
-                    </div>
-                  </div>
-
-                  <div className="action-bar single">
-                    <button
-                      type="button"
-                      className="primary-button"
-                      onClick={() => {
-                        setActiveTab('talk')
-                        setTalkMode(selectedLesson.scene === 'Daily' ? 'Free Talk' : selectedLesson.scene)
-                        setTalkContext(`围绕语法课 ${selectedLesson.title} 进行实战练习`)
-                        setSelectedLesson(null)
-                      }}
-                    >
-                      Practice In Talk With Me
-                    </button>
-                  </div>
-                </section>
               ) : (
                 <>
                   {activeTab === 'vocabulary' && (
@@ -2293,7 +2335,7 @@ function App() {
                       </div>
 
                       <div className="chip-row page-filter-row reader-filter">
-                        {['All', 'Speech', 'Travel', 'News'].map((item) => (
+                        {readerTabs.map((item) => (
                           <button
                             key={item}
                             type="button"
@@ -2306,6 +2348,10 @@ function App() {
                       </div>
 
                       <div className="list-stack">
+                        <article className="history-card reader-update-card">
+                          <strong>每日更新</strong>
+                          <p>{readerLastUpdatedAt}</p>
+                        </article>
                         {isLoadingReader && (
                           <article className="history-card">
                             <strong>正在更新 Reader</strong>
@@ -2325,6 +2371,7 @@ function App() {
                             </div>
                             <strong>{item.title}</strong>
                             <p>{item.summary}</p>
+                            <p className="mini-text">{item.updatedAt || readerLastUpdatedAt}</p>
                           </button>
                         ))}
                       </div>
@@ -2494,36 +2541,6 @@ function App() {
                     </section>
                   )}
 
-                  {activeTab === 'grammar' && (
-                    <section className="tab-screen">
-                      <div className="top-panel">
-                        <div>
-                          <span className="eyebrow">Grammar</span>
-                          <h2>场景化语法课</h2>
-                        </div>
-                        <span className="pill-info">Recommended</span>
-                      </div>
-
-                      <div className="list-stack">
-                        {lessons.map((lesson) => (
-                          <button
-                            key={lesson.id}
-                            type="button"
-                            className="lesson-card"
-                            onClick={() => setSelectedLesson(lesson)}
-                          >
-                            <div className="lesson-card__top">
-                              <span className={`tag tag--${lesson.scene.toLowerCase()}`}>{lesson.scene}</span>
-                              <span>2-3 grammar points</span>
-                            </div>
-                            <strong>{lesson.title}</strong>
-                            <p>{lesson.goal}</p>
-                          </button>
-                        ))}
-                      </div>
-                    </section>
-                  )}
-
                   {activeTab === 'history' && (
                     <section className="tab-screen">
                       <div className="top-panel">
@@ -2685,19 +2702,11 @@ function App() {
                   </button>
                   <button
                     type="button"
-                    className="nav-talk"
+                    className={`nav-item ${activeTab === 'talk' ? 'active' : ''}`}
                     onClick={() => setActiveTab('talk')}
                     aria-label="口语聊天"
                   >
                     <Icon name="mic" className="icon-md" />
-                  </button>
-                  <button
-                    type="button"
-                    className={`nav-item ${activeTab === 'grammar' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('grammar')}
-                    aria-label="语法"
-                  >
-                    <Icon name="grid" className="icon-md" />
                   </button>
                   <button
                     type="button"

@@ -125,6 +125,21 @@ const fallbackReaderItems = [
     sentenceZh: '我们在安静的街道上闲逛，直到整座城市慢慢醒来。',
     prompt: '用比较轻松的方式和我聊一聊你最喜欢的旅行城市。',
   },
+  {
+    id: 'news-ai-office',
+    title: 'Small AI Tools Are Changing Daily Office Tasks',
+    source: 'Tech News',
+    level: '适合母语 7-8 年级',
+    minutes: '5 min',
+    tag: 'News',
+    summary: '一篇科技新闻风格短文，讨论 AI 工具如何改变普通办公流程。',
+    articleBody: 'Instead of replacing entire jobs at once, many small AI tools are quietly changing everyday office work. Employees now use them to summarize meetings, rewrite emails, organize notes, and prepare first drafts. Managers say the biggest impact is not dramatic automation, but faster completion of repetitive tasks. At the same time, companies are learning that human review still matters. A tool may save time, but people must still check tone, accuracy, and business context before sending anything important. For many teams, the new question is no longer whether to use these tools, but how to use them wisely.',
+    keyWord: 'draft',
+    keyWordMeaning: '草稿，初稿',
+    sentence: 'Managers say the biggest impact is not dramatic automation, but faster completion of repetitive tasks.',
+    sentenceZh: '管理者表示，最大的影响不是戏剧性的自动化，而是重复任务完成得更快了。',
+    prompt: '和我聊聊你是否愿意在学习或工作中使用 AI 工具，以及原因。',
+  },
 ]
 
 const sceneCycle = ['Daily', 'Work', 'Meeting', 'Interview', 'Travel']
@@ -177,6 +192,48 @@ function buildDailyWordsFallback(scenes = sceneCycle) {
 
 function buildReaderFallback() {
   return fallbackReaderItems
+}
+
+function normalizeReaderItem(rawItem = {}, index = 0) {
+  const safeTag = ['Speech', 'Travel', 'News'].includes(rawItem.tag) ? rawItem.tag : fallbackReaderItems[index % fallbackReaderItems.length]?.tag || 'News'
+  const fallback = fallbackReaderItems.find((item) => item.tag === safeTag) ?? fallbackReaderItems[index % fallbackReaderItems.length]
+
+  return {
+    ...fallback,
+    ...rawItem,
+    id: typeof rawItem.id === 'string' && rawItem.id.trim() ? rawItem.id : `${safeTag.toLowerCase()}-${index}`,
+    tag: safeTag,
+    title: typeof rawItem.title === 'string' && rawItem.title.trim() ? rawItem.title : fallback.title,
+    source: typeof rawItem.source === 'string' && rawItem.source.trim() ? rawItem.source : fallback.source,
+    level: typeof rawItem.level === 'string' && rawItem.level.trim() ? rawItem.level : fallback.level,
+    minutes: typeof rawItem.minutes === 'string' && rawItem.minutes.trim() ? rawItem.minutes : fallback.minutes,
+    summary: typeof rawItem.summary === 'string' && rawItem.summary.trim() ? rawItem.summary : fallback.summary,
+    articleBody: typeof rawItem.articleBody === 'string' && rawItem.articleBody.trim() ? rawItem.articleBody : fallback.articleBody,
+    keyWord: typeof rawItem.keyWord === 'string' && rawItem.keyWord.trim() ? rawItem.keyWord : fallback.keyWord,
+    keyWordMeaning: typeof rawItem.keyWordMeaning === 'string' && rawItem.keyWordMeaning.trim() ? rawItem.keyWordMeaning : fallback.keyWordMeaning,
+    sentence: typeof rawItem.sentence === 'string' && rawItem.sentence.trim() ? rawItem.sentence : fallback.sentence,
+    sentenceZh: typeof rawItem.sentenceZh === 'string' && rawItem.sentenceZh.trim() ? rawItem.sentenceZh : fallback.sentenceZh,
+    prompt: typeof rawItem.prompt === 'string' && rawItem.prompt.trim() ? rawItem.prompt : fallback.prompt,
+  }
+}
+
+function ensureReaderCoverage(items = []) {
+  const normalized = Array.isArray(items)
+    ? items.map((item, index) => normalizeReaderItem(item, index))
+    : []
+  const existingTags = new Set(normalized.map((item) => item.tag))
+  const missingTags = ['Speech', 'Travel', 'News'].filter((tag) => !existingTags.has(tag))
+
+  return [
+    ...normalized,
+    ...missingTags.map((tag) => {
+      const fallback = fallbackReaderItems.find((item) => item.tag === tag) ?? fallbackReaderItems[0]
+      return {
+        ...fallback,
+        id: `${fallback.id}-${tag.toLowerCase()}-fallback`,
+      }
+    }),
+  ]
 }
 
 function normalizeExamples(examples = []) {
@@ -448,13 +505,13 @@ app.post('/api/reader/feed', async (req, res) => {
     const parsed = JSON.parse(content)
     res.json({
       source: 'deepseek',
-      items: parsed.items,
+      items: ensureReaderCoverage(parsed.items),
     })
   } catch (error) {
     res.json({
       source: 'mock',
       degraded: true,
-      items: buildReaderFallback(),
+      items: ensureReaderCoverage(buildReaderFallback()),
       error: error instanceof Error ? error.message : 'unknown_error',
     })
   }
