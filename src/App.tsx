@@ -1804,9 +1804,31 @@ function App() {
                         <h3>相关词</h3>
                         <div className="chip-row">
                           {Array.isArray(selectedWord.related) && selectedWord.related.map((item) => (
-                            <span key={item} className="soft-chip">
+                            <button
+                              key={item}
+                              type="button"
+                              className="soft-chip"
+                              onClick={() => {
+                                setSearchInput(item)
+                                setSearchMode('direct')
+                                // Trigger the search process
+                                setIsSearchingWord(true)
+                                searchVocabulary({ query: item, mode: 'direct' })
+                                  .then((response) => {
+                                    const newItem: VocabularyItem = {
+                                      ...response.item,
+                                      id: response.item.id ?? response.item.term.toLowerCase().replace(/\s+/g, '-'),
+                                    }
+                                    setSelectedWord(newItem)
+                                    rememberSearch(item, 'direct', savedWords.includes(newItem.id))
+                                  })
+                                  .catch(() => {})
+                                  .finally(() => setIsSearchingWord(false))
+                              }}
+                              style={{ border: 'none', cursor: 'pointer', font: 'inherit' }}
+                            >
                               {item}
-                            </span>
+                            </button>
                           ))}
                         </div>
                         <p className="secondary-text">{selectedWord.confusing}</p>
