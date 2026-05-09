@@ -364,11 +364,11 @@ app.post('/api/reader/feed', async (req, res) => {
         {
           role: 'system',
           content:
-            '你是英语学习产品的 Reader 内容编辑。请严格输出 JSON，顶层字段为 items。items 是 2 到 4 篇文章的数组。每个 item 必须包含 id, title, source, level, minutes, tag, summary, keyWord, keyWordMeaning, sentence, sentenceZh, prompt。内容要像高质量英文文章、新闻或演讲节选的学习版本，不要编造夸张新闻。',
+            '你是英语学习产品的 Reader 内容编辑。请严格输出 JSON，顶层字段为 items。items 是 2 到 4 篇文章的数组。\n要求：\n1. 内容必须是非常贴近真实世界的近期新闻、科技前沿、职场趋势或真实生活方式文章（可以基于你所知的真实世界知识生成高度逼真的新闻或文章节选）。\n2. 绝对不要使用像 "Lily plans a trip" 这种小学生课本式的幼稚内容。\n3. 每个 item 包含: id, title, source(如 BBC News, TechCrunch), level, minutes, tag(如 Tech, World, Career), summary(中文摘要), keyWord, keyWordMeaning, sentence, sentenceZh, prompt(用于口语讨论的引导词)。',
         },
         {
           role: 'user',
-          content: `请生成适合 ${level} 的 Reader 首页内容，优先覆盖这些场景：${scenes.join('、')}。内容解释语言用中文，标题和句子保持英文。`,
+          content: `请生成适合 ${level} 的高质量、真实的英语阅读素材，优先覆盖这些领域：${scenes.join('、')}。内容解释语言用中文，标题和句子保持英文。`,
         },
       ],
       { type: 'json_object' },

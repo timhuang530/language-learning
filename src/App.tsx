@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
-import { fetchDailyVocabulary, fetchReaderFeed, healthcheck, searchVocabulary, sendTalkMessage, generateAssessment, evaluateAssessment, fetchAssessmentPlan, type AssessmentQuestion, type AssessmentResult } from './lib/api'
+import { fetchDailyVocabulary, fetchReaderFeed, searchVocabulary, sendTalkMessage, generateAssessment, evaluateAssessment, fetchAssessmentPlan, type AssessmentQuestion, type AssessmentResult } from './lib/api'
 import { usePersistentState } from './lib/storage'
 
 type MainTab = 'vocabulary' | 'reader' | 'talk' | 'grammar' | 'history'
@@ -520,9 +520,9 @@ function App() {
   const [searchInput, setSearchInput] = useState('')
   const [selectedScene, setSelectedScene] = useState('All')
   const [selectedWord, setSelectedWord] = useState<VocabularyItem | null>(null)
-  const [savedWords, setSavedWords] = usePersistentState<string[]>('ll.savedWords', [
+  const [savedWords, setSavedWords] = usePersistentState<string[]>('ll.savedWords.v2', [
     'compromise',
-    'follow-up',
+    'itinerary',
   ])
   const [selectedArticle, setSelectedArticle] = useState<ReaderItem | null>(null)
   const [readerCategory, setReaderCategory] = useState('All')
@@ -547,7 +547,6 @@ function App() {
   const [searchHistory, setSearchHistory] = usePersistentState<SearchHistoryItem[]>('ll.searchHistory', [])
   const [dailyWords, setDailyWords] = usePersistentState<VocabularyItem[]>('ll.dailyWords', [])
   const [readerItems, setReaderItems] = usePersistentState<ReaderItem[]>('ll.readerItems', readerSeed)
-  const [apiStatus, setApiStatus] = useState<'checking' | 'deepseek' | 'mock'>('checking')
   const [isSearchingWord, setIsSearchingWord] = useState(false)
   const [isSendingTalk, setIsSendingTalk] = useState(false)
   const [isLoadingDailyWords, setIsLoadingDailyWords] = useState(false)
@@ -594,12 +593,6 @@ function App() {
   }, [])
 
   useEffect(() => {
-    healthcheck()
-      .then((result) => setApiStatus(result.provider === 'deepseek' ? 'deepseek' : 'mock'))
-      .catch(() => setApiStatus('mock'))
-  }, [])
-
-  useEffect(() => {
     if (!isAssessmentComplete || historyTab === 'Chats') {
       fetchAssessmentPlan()
         .then((res) => setAssessmentPlan(res.plan))
@@ -626,12 +619,18 @@ function App() {
           }),
         ])
 
-        setDailyWords(
-          daily.items.map((item, index) => ({
-            ...item,
-            id: item.id || `${item.term.toLowerCase().replace(/\s+/g, '-')}-${index}`,
-          })),
-        )
+        const fetchedDaily = daily.items.map((item, index) => ({
+          ...item,
+          id: item.id || `${item.term.toLowerCase().replace(/\s+/g, '-')}-${index}`,
+        }))
+        
+        setDailyWords(fetchedDaily)
+        
+        setSavedWords((current) => {
+          const newIds = fetchedDaily.map((w: VocabularyItem) => w.id)
+          const combined = new Set([...current, ...newIds])
+          return Array.from(combined)
+        })
 
         setReaderItems(
           reader.items.map((item, index) => ({
@@ -640,7 +639,12 @@ function App() {
           })),
         )
       } catch {
-        setDailyWords(vocabularySeed.slice(0, 5))
+        const fallbackDaily = vocabularySeed.slice(0, 5)
+        setDailyWords(fallbackDaily)
+        setSavedWords((current) => {
+          const newIds = fallbackDaily.map((w) => w.id)
+          return Array.from(new Set([...current, ...newIds]))
+        })
         setReaderItems(readerSeed)
       } finally {
         setIsLoadingDailyWords(false)
@@ -2010,7 +2014,7 @@ function App() {
                         {isLoadingDailyWords && (
                           <article className="history-card">
                             <strong>正在获取今日词汇</strong>
-                            <p>DeepSeek 正在根据你的场景生成新的词语卡片。</p>
+                            <p>AI 正在根据你的场景生成新的词语卡片。</p>
                           </article>
                         )}
                         {filteredVocabulary.map((item) => (
@@ -2047,7 +2051,6 @@ function App() {
                           <span className="eyebrow">Reader</span>
                           <h2>读物</h2>
                         </div>
-                        <span className="pill-info">{apiStatus === 'deepseek' ? 'DeepSeek' : 'Mock'}</span>
                       </div>
 
                       <div className="chip-row page-filter-row reader-filter">
@@ -2067,7 +2070,7 @@ function App() {
                         {isLoadingReader && (
                           <article className="history-card">
                             <strong>正在更新 Reader</strong>
-                            <p>DeepSeek 正在准备新的英文文章与演讲内容。</p>
+                            <p>AI 正在准备新的英文文章与阅读内容。</p>
                           </article>
                         )}
                         {filteredReaderItems.map((item) => (
@@ -2094,10 +2097,8 @@ function App() {
                       <div className="talk-header">
                         <div className="top-panel talk-top">
                           <div>
-                            <span className="eyebrow">Talk With Me</span>
-                            <h2>American friend</h2>
+                            <h2>Talk With Me</h2>
                           </div>
-                          <span className="status-pill">{apiStatus === 'deepseek' ? 'DeepSeek' : 'Mock'}</span>
                         </div>
 
                         <div className="chip-row mode-filter-row">
