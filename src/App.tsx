@@ -329,6 +329,59 @@ const transcriptSamples: Record<TalkMode, string> = {
   Interview: 'i want to answer a question about my strengths and one difficult project from last year',
   Travel: 'i need to ask for directions and explain that my itinerary changed this afternoon',
 }
+const talkModeContextMap: Record<TalkMode, string> = {
+  'Free Talk': '围绕真实生活、工作见闻和个人观点自然聊天',
+  Work: '围绕项目推进、进度同步、卡点和协作方式继续交流',
+  Meeting: '围绕会议议程、表达观点、推进讨论和总结待办继续交流',
+  Interview: '围绕项目经历、职责归属、成果指标和问题解决继续交流',
+  Travel: '围绕行程变化、交通安排、预订和现场沟通继续交流',
+}
+const vocabularySceneGuideMap: Record<string, string> = {
+  All: '覆盖日常生活、通用商务、会议沟通、项目执行、面试表达和出行场景。',
+  Daily: '优先看寒暄社交、交通问路、住房安家、健康就医和餐厅点餐表达。',
+  Work: '优先看项目推进、书面沟通、请求协作、风险同步和交付复盘表达。',
+  Meeting: '优先看议程设置、表达观点、推进讨论、跟进待办和同步提醒表达。',
+  Interview: '优先看项目经历、成果指标、取舍判断、价值主张和问题解决表达。',
+  Travel: '优先看行程变化、交通换乘、预订点餐、搬家适应和现场求助表达。',
+}
+const vocabularySearchPlaceholderMap: Record<string, string> = {
+  All: 'Search a word',
+  Daily: '例如：settle in / commute / lease',
+  Work: '例如：bandwidth / blocker / rollout',
+  Meeting: '例如：agenda / heads-up / follow-up',
+  Interview: '例如：trade-off / impact / value proposition',
+  Travel: '例如：itinerary / reservation / transit card',
+}
+const readerCategoryGuideMap: Record<ReaderCategory, string> = {
+  All: '每日更新真实英语素材，覆盖讨论表达、城市生活、科技趋势和战略分析。',
+  Speech: '偏会议沟通、项目同步、书面更新和适合读后开口讨论的内容。',
+  Travel: '偏新城市适应、交通住宿、行程变化和真实生活体验。',
+  News: '偏科技产品、数据增长、战略规划、市场变化和路线图调整。',
+}
+const vocabularySceneOrder = ['Daily', 'Work', 'Meeting', 'Interview', 'Travel']
+const readerCategoryOrder: ReaderCategory[] = ['Speech', 'News', 'Travel']
+const talkModeEmptyStateMap: Record<TalkMode, { title: string; description: string }> = {
+  'Free Talk': {
+    title: '开始一段自然对话',
+    description: '可以聊今天发生的事、你的看法，或最近工作和生活里正在想的一件事。',
+  },
+  Work: {
+    title: '开始一次工作场景练习',
+    description: '适合练项目推进、进度同步、请求协作、说明 blocker 和后续计划。',
+  },
+  Meeting: {
+    title: '开始一次会议表达练习',
+    description: '适合练议程开场、表达观点、推进讨论、总结结论和 follow-up。',
+  },
+  Interview: {
+    title: '开始一次面试表达练习',
+    description: '适合练项目经历、成果指标、取舍判断、价值主张和问题解决。',
+  },
+  Travel: {
+    title: '开始一次出行沟通练习',
+    description: '适合练问路、通勤、预订、安家、就医和餐厅点餐等真实场景。',
+  },
+}
 
 const TALK_DEBUG_URL = 'http://127.0.0.1:7777/event'
 const TALK_DEBUG_SESSION_ID = 'talk-recording-auto-stop'
@@ -626,7 +679,7 @@ function App() {
     'll.assessmentComplete.v2',
     false,
   )
-  const [talkContext, setTalkContext] = useState('围绕你刚收藏或查过的词继续自然聊天')
+  const [talkContext, setTalkContext] = useState(talkModeContextMap['Free Talk'])
   const [speakingText, setSpeakingText] = useState<string | null>(null)
   const [isRecording, setIsRecording] = useState(false)
   const [liveTranscript, setLiveTranscript] = useState('')
@@ -783,6 +836,22 @@ function App() {
   }, [liveTranscript])
 
   const chatMessages = chatMessagesByMode[talkMode] ?? []
+  const activeVocabularyGuide = vocabularySceneGuideMap[selectedScene] ?? vocabularySceneGuideMap.All
+  const activeReaderGuide = readerCategoryGuideMap[readerCategory] ?? readerCategoryGuideMap.All
+  const activeTalkEmptyState = talkModeEmptyStateMap[talkMode]
+  const activeSearchPlaceholder =
+    searchMode === 'direct'
+      ? vocabularySearchPlaceholderMap[selectedScene] ?? vocabularySearchPlaceholderMap.All
+      : '用中文描述你想表达的场景或意思'
+
+  useEffect(() => {
+    setTalkContext((current) => {
+      if (!current || Object.values(talkModeContextMap).includes(current)) {
+        return talkModeContextMap[talkMode]
+      }
+      return current
+    })
+  }, [talkMode])
 
   useEffect(() => {
     if (activeTab !== 'talk') {
@@ -1618,6 +1687,35 @@ function App() {
     })
   }, [allVocabulary, searchInput, searchMode, selectedScene])
 
+  const displayedVocabulary = useMemo(() => {
+    const scenePriority = new Map(vocabularySceneOrder.map((scene, index) => [scene, index]))
+
+    return [...filteredVocabulary].sort((left, right) => {
+      const leftIsToday = dailyWords.some((item) => item.term === left.term)
+      const rightIsToday = dailyWords.some((item) => item.term === right.term)
+
+      if (leftIsToday !== rightIsToday) {
+        return leftIsToday ? -1 : 1
+      }
+
+      const leftScenePriority = scenePriority.get(left.scene) ?? 999
+      const rightScenePriority = scenePriority.get(right.scene) ?? 999
+
+      if (leftScenePriority !== rightScenePriority) {
+        return leftScenePriority - rightScenePriority
+      }
+
+      const leftSaved = savedWords.includes(left.id)
+      const rightSaved = savedWords.includes(right.id)
+
+      if (leftSaved !== rightSaved) {
+        return leftSaved ? -1 : 1
+      }
+
+      return left.term.localeCompare(right.term)
+    })
+  }, [dailyWords, filteredVocabulary, savedWords])
+
   const filteredReaderItems = useMemo(() => {
     if (readerCategory === 'All') {
       return readerItems
@@ -1625,6 +1723,28 @@ function App() {
 
     return readerItems.filter((item) => item.tag === readerCategory)
   }, [readerCategory, readerItems])
+
+  const displayedReaderItems = useMemo(() => {
+    const categoryPriority = new Map(readerCategoryOrder.map((item, index) => [item, index]))
+
+    return [...filteredReaderItems].sort((left, right) => {
+      const leftPriority = categoryPriority.get(left.tag as ReaderCategory) ?? 999
+      const rightPriority = categoryPriority.get(right.tag as ReaderCategory) ?? 999
+
+      if (leftPriority !== rightPriority) {
+        return leftPriority - rightPriority
+      }
+
+      const leftUpdatedAt = left.updatedAt ?? ''
+      const rightUpdatedAt = right.updatedAt ?? ''
+
+      if (leftUpdatedAt !== rightUpdatedAt) {
+        return rightUpdatedAt.localeCompare(leftUpdatedAt)
+      }
+
+      return left.title.localeCompare(right.title)
+    })
+  }, [filteredReaderItems])
 
   const todayAddedWordCount = useMemo(() => {
     return new Set([
@@ -2274,6 +2394,7 @@ function App() {
                         <div>
                           <span className="eyebrow">Vocabulary</span>
                           <h2>词汇</h2>
+                          <p className="mini-text" style={{ margin: 0 }}>{activeVocabularyGuide}</p>
                         </div>
                         <span className="pill-info">今日新增 {todayAddedWordCount} 词语</span>
                       </div>
@@ -2295,10 +2416,10 @@ function App() {
                         {isLoadingDailyWords && (
                           <article className="history-card">
                             <strong>正在获取今日词汇</strong>
-                            <p>AI 正在根据你的场景生成新的词语卡片。</p>
+                            <p>正在按当前场景整理新的词汇卡片。</p>
                           </article>
                         )}
-                        {filteredVocabulary.map((item) => (
+                        {displayedVocabulary.map((item) => (
                           <button
                             key={item.id}
                             type="button"
@@ -2331,6 +2452,7 @@ function App() {
                         <div>
                           <span className="eyebrow">Reader</span>
                           <h2>读物</h2>
+                          <p className="mini-text" style={{ margin: 0 }}>{activeReaderGuide}</p>
                         </div>
                       </div>
 
@@ -2355,10 +2477,10 @@ function App() {
                         {isLoadingReader && (
                           <article className="history-card">
                             <strong>正在更新 Reader</strong>
-                            <p>AI 正在准备新的英文文章与阅读内容。</p>
+                            <p>正在整理新的英文文章与阅读内容。</p>
                           </article>
                         )}
-                        {filteredReaderItems.map((item) => (
+                        {displayedReaderItems.map((item) => (
                           <button
                             key={item.id}
                             type="button"
@@ -2430,8 +2552,8 @@ function App() {
                               <div className="talk-empty-state__icon">
                                 <Icon name="mic" className="icon-md" />
                               </div>
-                              <strong>开始第一轮对话</strong>
-                              <p>点击下方按钮直接开口说英语，系统会自动录音、转写并生成语音回复。</p>
+                              <strong>{activeTalkEmptyState.title}</strong>
+                              <p>{activeTalkEmptyState.description}</p>
                             </div>
                           )}
                           {chatMessages.map((message, index) => {
@@ -2641,9 +2763,7 @@ function App() {
                             }
                           }}
                           placeholder={
-                            searchMode === 'direct'
-                              ? 'Search a word'
-                              : '用中文描述想表达什么'
+                            activeSearchPlaceholder
                           }
                         />
                       </div>
