@@ -249,6 +249,22 @@ const readerSeed: ReaderItem[] = [
     prompt: '和我聊聊你说英语时最想改善的表达问题。',
   },
   {
+    id: 'speech-written-updates',
+    title: 'Small Written Updates Often Prevent Bigger Problems',
+    source: 'Team communication note',
+    level: '适合母语 7-8 年级',
+    minutes: '4 min',
+    tag: 'Speech',
+    summary: '一篇偏沟通训练的短文，围绕书面同步、heads-up 和 follow-up 展开。',
+    articleBody:
+      'In many teams, people think communication mainly happens in meetings. In reality, a large part of collaboration happens through short written updates. A simple heads-up can save others from working with outdated information, and a clear follow-up can prevent the same question from being asked three times.\n\nGood written communication is not about sounding formal. It is about helping the next person understand what changed, what matters now, and what action is expected. When someone writes a short update with clear ownership, the team moves faster and wastes less energy on confusion.\n\nThat is why experienced managers often pay attention to the quality of written updates, not just the speed of replies. A strong update creates alignment, keeps stakeholders in the loop, and gives people enough context to respond well.',
+    keyWord: 'heads-up',
+    keyWordMeaning: '预先提醒，先告知一下',
+    sentence: 'A simple heads-up can save others from working with outdated information.',
+    sentenceZh: '一个简单的提前提醒，就能避免别人继续基于过时信息工作。',
+    prompt: '和我聊聊你更喜欢口头同步还是书面同步，以及原因。',
+  },
+  {
     id: 'travel-city',
     title: 'A Weekend Walk Through an Old City',
     source: 'Travel story',
@@ -277,6 +293,22 @@ const readerSeed: ReaderItem[] = [
     sentence: 'A flexible itinerary does not remove every problem, but it can reduce stress.',
     sentenceZh: '灵活的行程安排不能解决所有问题，但可以减少压力。',
     prompt: '聊聊你旅行时最怕遇到什么突发状况，以及你会怎么处理。',
+  },
+  {
+    id: 'travel-settling',
+    title: 'The First Weeks in a New City Feel Like a Language Test',
+    source: 'Relocation note',
+    level: '适合母语 6-7 年级',
+    minutes: '4 min',
+    tag: 'Travel',
+    summary: '一篇围绕搬家安家与城市适应的文章，覆盖通勤、租房和日常求助表达。',
+    articleBody:
+      'Moving to a new city looks exciting from the outside, but the first weeks can feel surprisingly intense. Simple tasks suddenly become language tasks: asking how long the commute takes, whether utilities are included in the rent, or where to buy a local SIM card.\n\nEven casual questions like “How are you settling in?” can open meaningful conversations. They invite you to talk about your neighborhood, the office, transportation, and the little surprises that come with a new place.\n\nFor many people, adapting to a city is not only about geography. It is also about building confidence in everyday communication. The more small conversations you manage successfully, the faster the city begins to feel familiar.',
+    keyWord: 'settle in',
+    keyWordMeaning: '安顿下来，逐渐适应新环境',
+    sentence: 'The more small conversations you manage successfully, the faster the city begins to feel familiar.',
+    sentenceZh: '你越能顺利应对这些小对话，这座城市就越快会让你觉得熟悉。',
+    prompt: '和我聊聊如果你搬到一个新城市，最先想解决的三件事是什么。',
   },
   {
     id: 'news-city',
@@ -308,10 +340,27 @@ const readerSeed: ReaderItem[] = [
     sentenceZh: '管理者表示，最大的影响不是戏剧性的自动化，而是重复任务完成得更快了。',
     prompt: '和我聊聊你是否愿意在学习或工作中使用 AI 工具，以及原因。',
   },
+  {
+    id: 'news-roadmap',
+    title: 'Why Teams Revisit the Roadmap When the Market Changes',
+    source: 'Strategy review',
+    level: '适合母语 8-9 年级',
+    minutes: '5 min',
+    tag: 'News',
+    summary: '一篇战略分析风格的文章，讨论市场变化、产品路线图和优先级调整。',
+    articleBody:
+      'A roadmap can create confidence, but strong teams know that a roadmap should not become a rigid promise to ignore new information. Markets change quickly. Competitors release new features, user behavior evolves, and once-promising assumptions may no longer hold.\n\nWhen that happens, leaders need to zoom out and ask whether the current roadmap still reflects the real strategic priority. Sometimes the answer is yes. At other times, the best move is to adjust the plan, re-sequence the work, or narrow the scope so the team can protect its core value proposition.\n\nRevisiting a roadmap is not always a sign of uncertainty. In many cases, it is a sign of discipline. Teams that revisit their priorities thoughtfully are often the ones that avoid wasting months on work that no longer matters.',
+    keyWord: 'roadmap',
+    keyWordMeaning: '路线图；团队在未来一段时间内的重点计划与节奏安排',
+    sentence: 'Revisiting a roadmap is not always a sign of uncertainty.',
+    sentenceZh: '重新审视路线图并不总意味着团队缺乏确定性。',
+    prompt: '和我聊聊如果市场变化很快，团队应该坚持原计划还是及时调整。',
+  },
 ]
 
 const readerTabs: ReaderCategory[] = ['All', 'Speech', 'Travel', 'News']
 const readerContentTabs: Exclude<ReaderCategory, 'All'>[] = ['Speech', 'Travel', 'News']
+const readerMinimumPerTag = 3
 
 const emptyChatMessagesByMode: ChatMessagesByMode = {
   'Free Talk': [],
@@ -424,6 +473,33 @@ function buildReaderUpdatedAtLabel(date = new Date()) {
   })}`
 }
 
+function buildArticleParagraphs(articleBody = '') {
+  const trimmed = articleBody.trim()
+
+  if (!trimmed) {
+    return []
+  }
+
+  const explicitParagraphs = trimmed
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean)
+
+  if (explicitParagraphs.length > 1) {
+    return explicitParagraphs
+  }
+
+  const sentences = trimmed.match(/[^.!?]+[.!?]+|[^.!?]+$/g)?.map((item) => item.trim()).filter(Boolean) ?? [trimmed]
+  const chunkSize = sentences.length >= 12 ? 4 : 3
+  const paragraphs: string[] = []
+
+  for (let index = 0; index < sentences.length; index += chunkSize) {
+    paragraphs.push(sentences.slice(index, index + chunkSize).join(' '))
+  }
+
+  return paragraphs
+}
+
 function ensureReaderCoverage(items: ReaderItem[], fallbackDateLabel: string) {
   const normalized = items.map((item, index) => ({
     ...item,
@@ -432,18 +508,17 @@ function ensureReaderCoverage(items: ReaderItem[], fallbackDateLabel: string) {
       : readerContentTabs[index % readerContentTabs.length],
     updatedAt: item.updatedAt || fallbackDateLabel,
   }))
+  const supplements = readerContentTabs.flatMap((tag) => {
+    const currentItems = normalized.filter((item) => item.tag === tag)
+    const neededCount = Math.max(0, readerMinimumPerTag - currentItems.length)
+    const fallbackPool = readerSeed.filter((item) => item.tag === tag)
 
-  const existingTags = new Set(normalized.map((item) => item.tag))
-  const missingTags = readerContentTabs.filter((tag) => !existingTags.has(tag))
-
-  const supplements = missingTags.map((tag) => {
-    const fallback = readerSeed.find((item) => item.tag === tag) ?? readerSeed[0]
-    return {
+    return fallbackPool.slice(0, neededCount).map((fallback, index) => ({
       ...fallback,
-      id: `${fallback.id}-${tag.toLowerCase()}-fallback`,
+      id: `${fallback.id}-${tag.toLowerCase()}-fallback-${index}`,
       tag,
       updatedAt: fallbackDateLabel,
-    }
+    }))
   })
 
   return [...normalized, ...supplements]
@@ -2287,42 +2362,16 @@ function App() {
                     <div className="detail-body">
                       <section className="content-card compact-card">
                         <h3>文章</h3>
-                        <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6, color: 'var(--color-text-primary)' }}>
-                          {selectedArticle.articleBody || (
-                            <>
-                              A small{' '}
-                              <button
-                                type="button"
-                                className="text-token"
-                                onClick={() =>
-                                  setReaderSelection({
-                                    type: 'word',
-                                    label: selectedArticle.keyWord,
-                                    detail: selectedArticle.keyWordMeaning,
-                                  } as ReaderSelection)
-                                }
-                              >
-                                {selectedArticle.keyWord}
-                              </button>{' '}
-                              can make the entire workday feel calmer. People who keep a clear routine often
-                              make faster decisions and feel less overwhelmed in meetings.
-                              <br /><br />
-                              <button
-                                type="button"
-                                className="sentence-token"
-                                onClick={() =>
-                                  setReaderSelection({
-                                    type: 'sentence',
-                                    label: selectedArticle.sentence,
-                                    detail: selectedArticle.sentenceZh,
-                                  } as ReaderSelection)
-                                }
-                              >
-                                {selectedArticle.sentence}
-                              </button>
-                            </>
-                          )}
-                        </p>
+                        <div className="reader-article-body">
+                          {(selectedArticle.articleBody
+                            ? buildArticleParagraphs(selectedArticle.articleBody)
+                            : [
+                                'A small change in wording can make the entire workday feel calmer. People who keep a clear routine often make faster decisions and feel less overwhelmed in meetings.',
+                                selectedArticle.sentence,
+                              ]).map((paragraph, index) => (
+                            <p key={`${selectedArticle.id}-paragraph-${index}`}>{paragraph}</p>
+                          ))}
+                        </div>
                       </section>
 
                       <section className="content-card compact-card">

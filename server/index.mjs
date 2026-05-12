@@ -497,6 +497,51 @@ const fallbackReaderItems = [
     sentenceZh: '重新审视路线图并不总意味着失败。',
     prompt: '和我聊聊如果市场变化很快，团队应该更坚持原计划还是及时调整？',
   },
+  {
+    id: 'speech-stakeholder-update',
+    title: 'Why Stakeholder Updates Work Better in Paragraphs, Not Fragments',
+    source: 'Communication Review',
+    level: '适合母语 7-8 年级',
+    minutes: '4 min',
+    tag: 'Speech',
+    summary: '一篇围绕书面同步的职场文章，讨论为什么清晰分段和完整上下文能减少反复沟通。',
+    articleBody: 'Many professionals believe a fast update is always a good update. However, a short message without structure often creates more questions than answers. Stakeholders usually need more than a result. They want to know what changed, why it changed, how serious the impact is, and what will happen next.\n\nThis is why strong written updates often use short paragraphs instead of a long block of text or a list of fragments. One paragraph can describe the current status, another can explain the blocker, and a third can show the next action and owner. That structure makes it easier for readers to scan, understand, and respond quickly.\n\nThe same idea applies to meeting summaries. If the recap clearly separates decisions, risks, and action items, the team is much less likely to leave with different interpretations. In other words, good formatting is not just a visual choice. It is part of effective collaboration.\n\nTeams that communicate this way often spend less time repeating background information in the next meeting. They also reduce the hidden cost of confusion, because everyone can see the same context at the same time. That is why many experienced managers care about writing quality even in informal updates.',
+    keyWord: 'stakeholder',
+    keyWordMeaning: '相关方；会受到项目影响、需要了解进展或参与决策的人',
+    sentence: 'A short message without structure often creates more questions than answers.',
+    sentenceZh: '一条没有结构的短消息，往往会制造出比解决更多的问题。',
+    prompt: '和我聊聊你收到过的一次特别清晰或特别混乱的工作同步。',
+  },
+  {
+    id: 'travel-commute-adaptation',
+    title: 'How Daily Commute Choices Shape Life in a New City',
+    source: 'Relocation Journal',
+    level: '适合母语 6-7 年级',
+    minutes: '4 min',
+    tag: 'Travel',
+    summary: '一篇围绕新城市通勤和生活适应的文章，适合练交通、租房与日常决策表达。',
+    articleBody: 'When people move to a new city, they often focus on rent first. Yet after a few weeks, many realize that commute matters just as much as the apartment itself. A cheaper place may look attractive online, but a long and unpredictable commute can quietly reshape the entire day.\n\nA difficult commute affects energy, planning, and even social life. If the subway is crowded, the transfer is inconvenient, or traffic is unreliable, people may arrive at work already tired. They may also hesitate to stay late, join coworkers for dinner, or explore new neighborhoods after work.\n\nThat is why many newcomers gradually change the way they evaluate a city. They stop asking only how much the apartment costs and start asking how the whole routine will feel. Can they walk to a grocery store? Is there a direct subway line? Is it easy to get home after meeting friends? Those small questions often shape long-term satisfaction more than people expect.\n\nIn this sense, commuting is not only a transportation issue. It is part of settling in. The better people understand the daily rhythm of the city, the more confident and comfortable they become in their new environment.',
+    keyWord: 'commute',
+    keyWordMeaning: '通勤；上下班往返的日常交通安排',
+    sentence: 'A long and unpredictable commute can quietly reshape the entire day.',
+    sentenceZh: '一次漫长且不可预测的通勤，会在不知不觉中改变整天的状态。',
+    prompt: '和我聊聊你选择住处时，会不会把通勤放在很重要的位置。',
+  },
+  {
+    id: 'news-experiment-review',
+    title: 'Why Good Teams Question Early Wins in Product Experiments',
+    source: 'Data Product Brief',
+    level: '适合母语 8-9 年级',
+    minutes: '5 min',
+    tag: 'News',
+    summary: '一篇数据分析风格的文章，讨论为什么实验初期的漂亮数据不一定代表真正成功。',
+    articleBody: 'A successful experiment can create excitement very quickly. When a new feature shows a higher click-through rate or a sudden spike in engagement, teams naturally want to move faster. But experienced product and data leaders often respond with a different question: what is the story behind these numbers?\n\nEarly gains do not always hold. A result may come from a small sample, an unusual traffic source, or a short-term novelty effect. Some users click because something is new, not because it creates lasting value. That is why good teams rarely treat one positive chart as the final answer.\n\nInstead, they compare the result with retention, repeat behavior, and qualitative feedback. They ask whether the effect appears across different segments, whether the metric is statistically meaningful, and whether the gain creates trade-offs elsewhere in the product. A feature that increases clicks but reduces trust or clarity may not be a real win.\n\nThis more disciplined approach can feel slower in the short term, but it usually leads to better decisions. In many product organizations, the real advantage is not speed alone. It is the ability to tell the difference between a promising signal and a misleading one before a full rollout.',
+    keyWord: 'outlier',
+    keyWordMeaning: '异常值；与整体趋势明显不同的数据点',
+    sentence: 'Good teams rarely treat one positive chart as the final answer.',
+    sentenceZh: '优秀的团队很少会把一张漂亮的正向图表当作最终答案。',
+    prompt: '和我聊聊如果一个新功能的数据很好看，你会先立刻放量还是先继续验证。',
+  },
 ]
 
 const sceneCycle = ['Daily', 'Work', 'Meeting', 'Interview', 'Travel']
@@ -549,7 +594,7 @@ function buildDailyWordsFallback(scenes = sceneCycle) {
 }
 
 function buildReaderFallback() {
-  return fallbackReaderItems
+  return ensureReaderCoverage(fallbackReaderItems)
 }
 
 function buildSceneContentHint(scenes = []) {
@@ -634,9 +679,49 @@ function buildTalkModeHint(mode = 'Free Talk') {
   return 'Prefer realistic daily life, workplace, project, meeting, tech, product, data, and relocation topics from the content reference when helpful, and gently steer the learner into expressing opinions or explaining decisions.'
 }
 
+function estimateReaderMinutes(articleBody = '') {
+  const wordCount = articleBody.trim().split(/\s+/).filter(Boolean).length
+
+  if (wordCount >= 720) {
+    return '5 min'
+  }
+  if (wordCount >= 540) {
+    return '4 min'
+  }
+  return '3 min'
+}
+
+function normalizeReaderArticleBody(articleBody = '', fallbackBody = '') {
+  const safeBody = typeof articleBody === 'string' && articleBody.trim() ? articleBody.trim() : fallbackBody
+
+  if (!safeBody) {
+    return fallbackBody
+  }
+
+  const explicitParagraphs = safeBody
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean)
+
+  if (explicitParagraphs.length > 1) {
+    return explicitParagraphs.join('\n\n')
+  }
+
+  const sentences = safeBody.match(/[^.!?]+[.!?]+|[^.!?]+$/g)?.map((item) => item.trim()).filter(Boolean) ?? [safeBody]
+  const chunkSize = sentences.length >= 16 ? 4 : 3
+  const paragraphs = []
+
+  for (let index = 0; index < sentences.length; index += chunkSize) {
+    paragraphs.push(sentences.slice(index, index + chunkSize).join(' '))
+  }
+
+  return paragraphs.join('\n\n')
+}
+
 function normalizeReaderItem(rawItem = {}, index = 0) {
   const safeTag = ['Speech', 'Travel', 'News'].includes(rawItem.tag) ? rawItem.tag : fallbackReaderItems[index % fallbackReaderItems.length]?.tag || 'News'
   const fallback = fallbackReaderItems.find((item) => item.tag === safeTag) ?? fallbackReaderItems[index % fallbackReaderItems.length]
+  const articleBody = normalizeReaderArticleBody(rawItem.articleBody, fallback.articleBody)
 
   return {
     ...fallback,
@@ -646,9 +731,11 @@ function normalizeReaderItem(rawItem = {}, index = 0) {
     title: typeof rawItem.title === 'string' && rawItem.title.trim() ? rawItem.title : fallback.title,
     source: typeof rawItem.source === 'string' && rawItem.source.trim() ? rawItem.source : fallback.source,
     level: typeof rawItem.level === 'string' && rawItem.level.trim() ? rawItem.level : fallback.level,
-    minutes: typeof rawItem.minutes === 'string' && rawItem.minutes.trim() ? rawItem.minutes : fallback.minutes,
+    minutes: typeof rawItem.minutes === 'string' && rawItem.minutes.trim()
+      ? rawItem.minutes
+      : estimateReaderMinutes(articleBody),
     summary: typeof rawItem.summary === 'string' && rawItem.summary.trim() ? rawItem.summary : fallback.summary,
-    articleBody: typeof rawItem.articleBody === 'string' && rawItem.articleBody.trim() ? rawItem.articleBody : fallback.articleBody,
+    articleBody,
     keyWord: typeof rawItem.keyWord === 'string' && rawItem.keyWord.trim() ? rawItem.keyWord : fallback.keyWord,
     keyWordMeaning: typeof rawItem.keyWordMeaning === 'string' && rawItem.keyWordMeaning.trim() ? rawItem.keyWordMeaning : fallback.keyWordMeaning,
     sentence: typeof rawItem.sentence === 'string' && rawItem.sentence.trim() ? rawItem.sentence : fallback.sentence,
@@ -661,19 +748,19 @@ function ensureReaderCoverage(items = []) {
   const normalized = Array.isArray(items)
     ? items.map((item, index) => normalizeReaderItem(item, index))
     : []
-  const existingTags = new Set(normalized.map((item) => item.tag))
-  const missingTags = ['Speech', 'Travel', 'News'].filter((tag) => !existingTags.has(tag))
+  const contentTags = ['Speech', 'Travel', 'News']
+  const supplements = contentTags.flatMap((tag) => {
+    const currentItems = normalized.filter((item) => item.tag === tag)
+    const neededCount = Math.max(0, 3 - currentItems.length)
+    const fallbackPool = fallbackReaderItems.filter((item) => item.tag === tag)
 
-  return [
-    ...normalized,
-    ...missingTags.map((tag) => {
-      const fallback = fallbackReaderItems.find((item) => item.tag === tag) ?? fallbackReaderItems[0]
-      return {
-        ...fallback,
-        id: `${fallback.id}-${tag.toLowerCase()}-fallback`,
-      }
-    }),
-  ]
+    return fallbackPool.slice(0, neededCount).map((fallback, index) => ({
+      ...normalizeReaderItem(fallback, index),
+      id: `${fallback.id}-${tag.toLowerCase()}-fallback-${index}`,
+    }))
+  })
+
+  return [...normalized, ...supplements]
 }
 
 function normalizeExamples(examples = []) {
@@ -935,7 +1022,7 @@ app.post('/api/reader/feed', async (req, res) => {
         {
           role: 'system',
           content: withContentReference(
-            '你是英语学习产品的 Reader 内容编辑。请严格输出 JSON，顶层字段为 items。items 是 2 到 4 篇文章的数组。\n要求：\n1. 内容必须是非常贴近真实世界的近期新闻、科技前沿、职场趋势或真实生活方式文章（可以基于你所知的真实世界知识生成高度逼真的新闻或文章节选）。\n2. 绝对不要使用像 "Lily plans a trip" 这种小学生课本式的幼稚内容。\n3. 优先借鉴素材库中已经导入的日常生活、通用商务、会议沟通、项目执行、科技数据、产品体验、战略规划表达，让文章更像真实办公室、产品团队、项目协作环境或真实城市生活环境中的内容。\n4. 不同 tag 的内容画像必须明显不同：Speech 偏可讨论的职场表达与会议/项目沟通，News 偏科技产品数据与趋势或战略分析，Travel 偏真实旅行体验、搬家安家和变化处理。\n5. 如果用户场景包含 Work 或 Meeting，请优先生成项目启动、进度同步、风险升级、跨团队协作、产品评审、数据分析、灰度发布、复盘总结相关内容。\n6. 每个 item 包含: id, title, source(如 BBC News, TechCrunch), level, minutes, tag(如 Speech, Travel, News), summary(中文摘要), articleBody(英文正文，至少150字), keyWord, keyWordMeaning, sentence, sentenceZh, prompt(用于口语讨论的引导词)。',
+            '你是英语学习产品的 Reader 内容编辑。请严格输出 JSON，顶层字段为 items。items 必须是 9 到 12 篇文章的数组，并且 Speech、Travel、News 每个 tag 至少 3 篇。\n要求：\n1. 内容必须是非常贴近真实世界的近期新闻、科技前沿、职场趋势或真实生活方式文章（可以基于你所知的真实世界知识生成高度逼真的新闻或文章节选）。\n2. 绝对不要使用像 "Lily plans a trip" 这种小学生课本式的幼稚内容。\n3. 优先借鉴素材库中已经导入的日常生活、通用商务、会议沟通、项目执行、科技数据、产品体验、战略规划表达，让文章更像真实办公室、产品团队、项目协作环境或真实城市生活环境中的内容。\n4. 不同 tag 的内容画像必须明显不同：Speech 偏可讨论的职场表达与会议/项目沟通，News 偏科技产品数据与趋势或战略分析，Travel 偏真实旅行体验、搬家安家和变化处理。\n5. 如果用户场景包含 Work 或 Meeting，请优先生成项目启动、进度同步、风险升级、跨团队协作、产品评审、数据分析、灰度发布、复盘总结相关内容。\n6. 每篇 articleBody 必须是英文正文，长度控制在大约 450 到 750 个英文单词，对应 3 到 5 分钟阅读时间；正文必须分成 4 到 6 个自然段，并用空行分隔段落。\n7. summary 是中文摘要；minutes 只能写 3 min、4 min 或 5 min。\n8. 每个 item 包含: id, title, source(如 BBC News, TechCrunch), level, minutes, tag(如 Speech, Travel, News), summary(中文摘要), articleBody(英文正文), keyWord, keyWordMeaning, sentence, sentenceZh, prompt(用于口语讨论的引导词)。',
           ),
         },
         {
